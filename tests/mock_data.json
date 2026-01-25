@@ -1,0 +1,171 @@
+[
+  {
+    "asset": {
+      "uuid": "e4a5b6c7-d8e9-4a0b-1c2d-3e4f5a6b7c8d",
+      "hostname": "prod-web-01.example.com",
+      "ipv4": "192.168.1.10",
+      "operating_system": "Ubuntu 22.04"
+    },
+    "plugin": {
+      "id": 177314,
+      "name": "Ubuntu 22.04 LTS : OpenSSL vulnerabilities (USN-6188-1)",
+      "description": "The remote Ubuntu 22.04 LTS host has packages installed that are affected by multiple vulnerabilities in OpenSSL. An attacker could exploit these to cause a denial of service or execute arbitrary code.",
+      "solution": "Update the affected openssl packages to version 3.0.2-0ubuntu1.10 or later.",
+      "synopsis": "The remote Ubuntu host is missing one or more security updates.",
+      "see_also": [
+        "https://ubuntu.com/security/notices/USN-6188-1"
+      ],
+      "cve": [
+        "CVE-2023-2650",
+        "CVE-2023-0464"
+      ],
+      "exploit_available": false,
+      "has_patch": true
+    },
+    "severity": "critical",
+    "state": "open",
+    "first_found": "2023-10-01T12:00:00Z",
+    "last_found": "2023-10-25T14:30:00Z"
+  },
+  {
+    "asset": {
+      "uuid": "e4a5b6c7-d8e9-4a0b-1c2d-3e4f5a6b7c8d",
+      "hostname": "prod-web-01.example.com",
+      "ipv4": "192.168.1.10",
+      "operating_system": "Ubuntu 22.04"
+    },
+    "plugin": {
+      "id": 162163,
+      "name": "Apache HTTP Server 2.4.x < 2.4.54 Multiple Vulnerabilities",
+      "description": "The version of Apache httpd installed on the remote host is prior to 2.4.54. It is, therefore, affected by multiple vulnerabilities including potential for denial of service and HTTP request smuggling.",
+      "solution": "Upgrade to Apache HTTP Server version 2.4.54 or later.",
+      "synopsis": "The remote web server is affected by multiple vulnerabilities.",
+      "see_also": [
+        "https://httpd.apache.org/security/vulnerabilities_24.html"
+      ],
+      "cve": [
+        "CVE-2022-31813",
+        "CVE-2022-30556"
+      ],
+      "exploit_available": true,
+      "has_patch": true
+    },
+    "severity": "high",
+    "state": "open",
+    "first_found": "2023-11-01T09:00:00Z",
+    "last_found": "2023-11-05T10:15:00Z"
+  },
+  {
+    "asset": {
+      "uuid": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "hostname": "db-prod-01.example.com",
+      "ipv4": "192.168.1.20",
+      "operating_system": "Windows Server 2019"
+    },
+    "plugin": {
+      "id": 156345,
+      "name": "MS KB5012170: Windows Server 2019 April 2023 Security Update",
+      "description": "The remote Windows Server 2019 host is missing security update KB5012170. It is, therefore, affected by multiple vulnerabilities in Microsoft SQL Server and Windows components.",
+      "solution": "Apply Microsoft security update KB5012170.",
+      "synopsis": "The remote Windows host is affected by multiple vulnerabilities.",
+      "see_also": [
+        "https://support.microsoft.com/en-us/help/5012170"
+      ],
+      "cve": [
+        "CVE-2023-24880",
+        "CVE-2023-24881"
+      ],
+      "exploit_available": false,
+      "has_patch": true
+    },
+    "severity": "high",
+    "state": "open",
+    "first_found": "2023-09-15T08:00:00Z",
+    "last_found": "2023-09-20T11:00:00Z"
+  },
+  {
+    "asset": {
+      "uuid": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "hostname": "app-prod-02.example.com",
+      "ipv4": "192.168.1.30",
+      "operating_system": "Red Hat Enterprise Linux 8"
+    },
+    "plugin": {
+      "id": 167234,
+      "name": "RHEL 8 : nginx (RHSA-2023:2453)",
+      "description": "The remote Red Hat Enterprise Linux 8 host has packages installed that are affected by a vulnerability in nginx that could allow an attacker to perform HTTP request smuggling.",
+      "solution": "Update the nginx packages to version 1.14.1-9.module+el8.8.0+18775+6a85af79.1 or later.",
+      "synopsis": "The remote Red Hat host is missing a security update.",
+      "see_also": [
+        "https://access.redhat.com/errata/RHSA-2023:2453"
+      ],
+      "cve": [
+        "CVE-2022-41741",
+        "CVE-2022-41742"
+      ],
+      "exploit_available": false,
+      "has_patch": true
+    },
+    "severity": "medium",
+    "state": "open",
+    "first_found": "2023-08-10T14:00:00Z",
+    "last_found": "2023-09-01T16:30:00Z"
+  },
+  {
+    "asset": {
+      "uuid": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "hostname": "java-app-01.example.com",
+      "ipv4": "192.168.1.40",
+      "operating_system": "Ubuntu 20.04"
+    },
+    "plugin": {
+      "id": 189456,
+      "name": "Oracle Java SE Multiple Vulnerabilities (April 2023 CPU)",
+      "description": "The version of Oracle Java SE installed on the remote host is affected by multiple vulnerabilities including remote code execution flaws in the Hotspot and Networking components.",
+      "solution": "Upgrade to Oracle Java SE version 8u371, 11.0.19, 17.0.7, or 20.0.1 or later.",
+      "synopsis": "The remote host is affected by multiple Java vulnerabilities.",
+      "see_also": [
+        "https://www.oracle.com/security-alerts/cpuapr2023.html"
+      ],
+      "cve": [
+        "CVE-2023-21930",
+        "CVE-2023-21937",
+        "CVE-2023-21954"
+      ],
+      "exploit_available": true,
+      "has_patch": true
+    },
+    "severity": "critical",
+    "state": "open",
+    "first_found": "2023-07-15T10:00:00Z",
+    "last_found": "2023-09-22T12:45:00Z"
+  },
+  {
+    "asset": {
+      "uuid": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "hostname": "docker-host-01.example.com",
+      "ipv4": "192.168.1.50",
+      "operating_system": "Ubuntu 22.04"
+    },
+    "plugin": {
+      "id": 175892,
+      "name": "Docker Engine < 23.0.3 Multiple Vulnerabilities",
+      "description": "The version of Docker Engine installed on the remote host is prior to 23.0.3 and is affected by vulnerabilities that could allow container escape and privilege escalation.",
+      "solution": "Upgrade to Docker Engine version 23.0.3 or later.",
+      "synopsis": "The remote host has a container runtime affected by multiple vulnerabilities.",
+      "see_also": [
+        "https://docs.docker.com/engine/release-notes/23.0/"
+      ],
+      "cve": [
+        "CVE-2023-28840",
+        "CVE-2023-28841"
+      ],
+      "exploit_available": false,
+      "has_patch": true
+    },
+    "severity": "high",
+    "state": "open",
+    "first_found": "2023-06-20T08:30:00Z",
+    "last_found": "2023-09-10T11:15:00Z"
+  }
+]
