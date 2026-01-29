@@ -26,6 +26,7 @@ class Server(Base):
     asset_uuid = Column(String(255), unique=True, index=True)
     ipv4 = Column(String(45))  # IPv4 address
     operating_system = Column(String(255))
+    device_type = Column(String(50), default='unknown')  # server, workstation, network, unknown
     last_seen = Column(DateTime)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     

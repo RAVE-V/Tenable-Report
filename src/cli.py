@@ -303,9 +303,10 @@ def generate_report(tag, severity, state, format, output, fresh, use_cache):
 @click.option("--output", type=click.Path(), default="./reports", help="Output directory")
 @click.option("--sort-by", type=click.Choice(["critical", "high", "total", "hostname"]), default="critical", help="Sort servers by")
 @click.option("--min-vulns", type=int, default=0, help="Only show servers with at least N vulnerabilities")
+@click.option("--servers-only/--all-devices", default=True, help="Only include servers (default) or all devices")
 @click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
 @click.option("--use-cache", is_flag=True, help="Use cached data if available (skip freshness check)")
-def server_report(severity, state, format, output, sort_by, min_vulns, fresh, use_cache):
+def server_report(severity, state, format, output, sort_by, min_vulns, servers_only, fresh, use_cache):
     """Generate server-focused vulnerability report"""
     try:
         Config.validate()
@@ -400,8 +401,9 @@ def server_report(severity, state, format, output, sort_by, min_vulns, fresh, us
         quick_wins_detector.detect_quick_wins(vulns)
         
         # Group by Server
-        click.echo(f"Grouping by server (sort by: {sort_by})...")
-        server_grouper = ServerGrouper()
+        device_filter = "servers only" if servers_only else "all devices"
+        click.echo(f"Grouping by server ({device_filter}, sort by: {sort_by})...")
+        server_grouper = ServerGrouper(servers_only=servers_only)
         servers = server_grouper.group_by_server(vulns)
         
         # Filter by minimum vulnerabilities
@@ -415,8 +417,17 @@ def server_report(severity, state, format, output, sort_by, min_vulns, fresh, us
         # Get statistics
         stats = server_grouper.get_server_stats(servers)
         
+        # Count device types
+        device_types = {}
+        for _, server_data in servers.items():
+            dtype = server_data.get("device_type", "unknown")
+            device_types[dtype] = device_types.get(dtype, 0) + 1
+        
         click.echo(f"\n📊 Server Report Summary:")
-        click.echo(f"   Total Servers: {stats['total_servers']}")
+        click.echo(f"   Total Devices: {stats['total_servers']}")
+        if device_types:
+            for dtype, count in sorted(device_types.items()):
+                click.echo(f"   - {dtype.capitalize()}: {count}")
         click.echo(f"   Total Vulnerabilities: {stats['total_vulns']}")
         click.echo(f"   Critical: {stats['severity_totals']['critical']}")
         click.echo(f"   High: {stats['severity_totals']['high']}")

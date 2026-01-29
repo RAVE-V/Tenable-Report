@@ -2,10 +2,22 @@
 
 from typing import Dict, List
 from collections import defaultdict
+from src.utils.device_detector import DeviceTypeDetector
 
 
 class ServerGrouper:
     """Group vulnerabilities by server/hostname"""
+    
+    def __init__(self, servers_only: bool = True):
+        """
+        Initialize ServerGrouper
+        
+        Args:
+            servers_only: If True, only include actual servers (default).
+                         If False, include all devices.
+        """
+        self.servers_only = servers_only
+        self.device_detector = DeviceTypeDetector()
     
     def group_by_server(self, vulns: List[Dict]) -> Dict[str, Dict]:
         """
@@ -21,6 +33,7 @@ class ServerGrouper:
                     "hostname": "server1.company.com",
                     "ipv4": "192.168.1.100",
                     "os": "Windows Server 2019",
+                    "device_type": "server",
                     "vulnerabilities": [...],
                     "severity_counts": {"critical": 5, "high": 12, ...},
                     "total_vulns": 25,
@@ -33,6 +46,7 @@ class ServerGrouper:
             "hostname": None,
             "ipv4": None,
             "os": None,
+            "device_type": None,
             "vulnerabilities": [],
             "severity_counts": {"critical": 0, "high": 0, "medium": 0, "low": 0},
             "total_vulns": 0,
@@ -41,12 +55,21 @@ class ServerGrouper:
         
         for vuln in vulns:
             hostname = vuln.get("hostname", "Unknown")
+            operating_system = vuln.get("operating_system")
+            
+            # Detect device type
+            device_type = self.device_detector.detect_device_type(operating_system)
+            
+            # Skip non-servers if servers_only is enabled
+            if self.servers_only and device_type != 'server':
+                continue
             
             # Initialize server info if first time seeing this server
             if servers[hostname]["hostname"] is None:
                 servers[hostname]["hostname"] = hostname
                 servers[hostname]["ipv4"] = vuln.get("ipv4")
-                servers[hostname]["os"] = vuln.get("operating_system")
+                servers[hostname]["os"] = operating_system
+                servers[hostname]["device_type"] = device_type
             
             # Add vulnerability
             servers[hostname]["vulnerabilities"].append(vuln)
