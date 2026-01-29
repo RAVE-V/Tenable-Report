@@ -210,7 +210,7 @@ def sync_all(fresh):
     import time
     from src.database.models import Vulnerability
     from src.utils.device_detector import DeviceTypeDetector
-    from src.utils.vendor_detection import VendorDetector
+    from src.processors.vendor_detector import VendorDetector
     from src.normalizer import VulnerabilityNormalizer
     from src.cache import VulnCache
     
