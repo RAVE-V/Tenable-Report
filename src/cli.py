@@ -203,14 +203,16 @@ def inspect_data(fresh):
         
         # Device Type Detection
         detector = DeviceTypeDetector()
-        servers = sum(1 for v in vulns if detector.is_server(v.get('operating_system')))
-        workstations = sum(1 for v in vulns if detector.is_workstation(v.get('operating_system')))
-        other = len(vulns) - servers - workstations
+        device_types = {}
+        for v in vulns:
+            device_type = detector.detect_device_type(v.get('operating_system'))
+            device_types[device_type] = device_types.get(device_type, 0) + 1
         
         click.echo(f"\n🖥️  DEVICE CLASSIFICATION")
-        click.echo(f"   Servers: {servers} vulnerabilities")
-        click.echo(f"   Workstations: {workstations} vulnerabilities")
-        click.echo(f"   Other: {other} vulnerabilities")
+        for dtype in ['server', 'workstation', 'network', 'unknown']:
+            count = device_types.get(dtype, 0)
+            if count > 0:
+                click.echo(f"   {dtype.capitalize()}: {count} vulnerabilities")
         
         # Unique assets
         unique_assets = len(set(v.get('asset_uuid') for v in vulns if v.get('asset_uuid')))
@@ -324,6 +326,7 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
         # Normalize data
         click.echo("Normalizing vulnerability data...")
         vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
+        click.echo(f"  ➜ After normalization: {len(vulns)} vulnerabilities")
         
         # Filter by device type (servers only by default)
         if servers_only:
@@ -332,9 +335,10 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
             original_count = len(vulns)
             vulns = [v for v in vulns if detector.is_server(v.get('operating_system'))]
             filtered_count = original_count - len(vulns)
-            if filtered_count > 0:
-                click.echo(f"✓ Filtered {filtered_count} non-server devices (servers only)")
-                click.echo("  Tip: Use --all-devices to include workstations and other devices")
+            click.echo(f"  ➜ After servers-only filter: {len(vulns)} vulnerabilities (removed {filtered_count})")
+            if len(vulns) == 0:
+                click.echo(f"  ⚠️  WARNING: No servers detected! Your OS values might not match server patterns.")
+                click.echo(f"  💡 Try running with --all-devices to see all data")
         
         
         # Apply state filtering on normalized data
@@ -342,8 +346,10 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
             original_count = len(vulns)
             vulns = [v for v in vulns if v.get('state', '').upper() in state_list]
             filtered_count = original_count - len(vulns)
-            if filtered_count > 0:
-                click.echo(f"✓ Filtered {filtered_count} vulnerabilities by state (keeping {state_list})")
+            click.echo(f"  ➜ After state filter: {len(vulns)} vulnerabilities (removed {filtered_count})")
+            if len(vulns) == 0:
+                click.echo(f"  ⚠️  WARNING: State filter removed all data!")
+                click.echo(f"  💡 Available states: run 'inspect-data' to see what states exist")
         
         if not vulns:
             click.echo("✗ No vulnerabilities found matching filters")
