@@ -164,9 +164,11 @@ class SyncManager:
             vendor_detector = VendorDetector()
             
             processed_objects = []
-            for v in vulns:
+            for i, v in enumerate(vulns):
+                # Get usage of raw data
+                raw_v = raw_vulns[i] if raw_vulns and i < len(raw_vulns) else {}
+
                 # Ensure date fields are datetime objects or None (Handled by Normalizer fix now)
-                # But double check usage here if needed.
                 
                 os_val = v.get('operating_system')
                 device_type = detector.detect_device_type(os_val)
@@ -194,7 +196,7 @@ class SyncManager:
                     'description': v.get('description', '')[:2000] if v.get('description') else None,
                     'first_found': v.get('first_found'),
                     'last_found': v.get('last_found'),
-                    'raw_data': v, # raw_data column expects JSON serializable dict
+                    'raw_data': raw_v, # Use original raw data (JSON serializable) instead of normalized dict with datetimes
                 })
             
             # Count device types
