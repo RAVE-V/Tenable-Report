@@ -132,9 +132,9 @@ def sync_db(limit, days):
 @click.option("--tag", help="Filter by tag (format: Category:Value)")
 @click.option("--severity", help="Filter by severity (comma-separated: Critical,High,Medium,Low). Default: ALL")
 @click.option("--state", help="Filter by state (comma-separated: ACTIVE,RESURFACED,NEW). Default: ALL")
-@click.option("--format", type=click.Choice(["xlsx", "html", "both"]), default="xlsx", help="Output format")
+@click.option("--format", type=click.Choice(["xlsx", "html", "both"]), default="html", help="Output format (default: html)")
 @click.option("--output", type=click.Path(), default="./reports", help="Output directory")
-@click.option("--servers-only/--all-devices", default=False, help="Only include servers or all devices (default: all devices for testing)")
+@click.option("--servers-only/--all-devices", default=True, help="Device scope: servers-only (default) or all-devices (includes workstations, printers, etc.)")
 @click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
 @click.option("--use-cache", is_flag=True, help="Use cached data if available (skip freshness check)")
 def generate_report(tag, severity, state, format, output, servers_only, fresh, use_cache):
