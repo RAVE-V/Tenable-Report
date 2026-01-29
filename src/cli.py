@@ -3,7 +3,7 @@
 import click
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from src.config import Config
@@ -55,7 +55,6 @@ def sync_db(limit, days):
         filters = {}
         
         if days:
-            from datetime import datetime, timedelta
             cutoff_date = datetime.now() - timedelta(days=days)
             # Tenable uses Unix timestamps
             filters["last_found"] = int(cutoff_date.timestamp())
