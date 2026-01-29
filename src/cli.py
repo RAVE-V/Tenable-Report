@@ -199,6 +199,124 @@ def sync_db(limit, days):
 
 
 @cli.command()
+@click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
+def sync_all(fresh):
+    """Sync all vulnerabilities to database with pre-computed classifications
+    
+    This command fetches vulnerabilities from Tenable, normalizes the data,
+    classifies devices (server/workstation/network), detects vendors, and
+    stores everything in the database for instant report generation.
+    """
+    import time
+    from src.database.models import Vulnerability
+    from src.utils.device_detector import DeviceTypeDetector
+    from src.utils.vendor_detection import VendorDetector
+    from src.normalizer import VulnerabilityNormalizer
+    from src.cache import VulnCache
+    
+    start_time = time.time()
+    
+    try:
+        Config.validate()
+        
+        # Step 1: Fetch vulnerabilities (from cache or API)
+        click.echo("📥 Step 1/4: Fetching vulnerability data...")
+        cache = VulnCache()
+        filters = {}
+        
+        if fresh:
+            click.echo("   Fresh mode: Ignoring cache, fetching from API...")
+            client = TenableExporter()
+            raw_vulns = client.export_vulnerabilities(filters)
+            # Save to cache for future use
+            cache.save(filters, raw_vulns, None)
+        else:
+            cached = cache.get(filters)
+            if cached:
+                raw_vulns = cached.get('vulnerabilities', [])
+                click.echo(f"   ✓ Using cached data ({len(raw_vulns)} vulnerabilities)")
+            else:
+                click.echo("   Cache miss, fetching from Tenable API...")
+                client = TenableExporter()
+                raw_vulns = client.export_vulnerabilities(filters)
+                cache.save(filters, raw_vulns, None)
+        
+        click.echo(f"   ✓ {len(raw_vulns)} raw vulnerabilities fetched")
+        
+        # Step 2: Normalize data
+        click.echo("🔄 Step 2/4: Normalizing vulnerability data...")
+        vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
+        click.echo(f"   ✓ {len(vulns)} vulnerabilities normalized")
+        
+        # Step 3: Classify and process
+        click.echo("🏷️  Step 3/4: Classifying devices and detecting vendors...")
+        detector = DeviceTypeDetector()
+        vendor_detector = VendorDetector()
+        
+        processed = []
+        for v in vulns:
+            os_val = v.get('operating_system')
+            device_type = detector.detect_device_type(os_val)
+            vendor, product = vendor_detector.detect(v.get('plugin_name', ''))
+            
+            processed.append({
+                'asset_uuid': v.get('asset_uuid'),
+                'hostname': v.get('hostname'),
+                'ipv4': v.get('ipv4'),
+                'operating_system': os_val[:255] if os_val else None,
+                'device_type': device_type,
+                'plugin_id': v.get('plugin_id'),
+                'plugin_name': v.get('plugin_name', '')[:500] if v.get('plugin_name') else None,
+                'severity': v.get('severity'),
+                'state': v.get('state'),
+                'cve': v.get('cve') if isinstance(v.get('cve'), list) else [],
+                'vpr_score': v.get('vpr_score'),
+                'cvss_score': v.get('cvss_score'),
+                'exploit_available': v.get('exploit_available', False),
+                'vendor': vendor,
+                'product': product,
+                'solution': v.get('solution', '')[:2000] if v.get('solution') else None,
+                'description': v.get('description', '')[:2000] if v.get('description') else None,
+                'first_found': v.get('first_found'),
+                'last_found': v.get('last_found'),
+                'raw_data': v,
+            })
+        
+        # Count device types
+        from collections import Counter
+        device_counts = Counter(p['device_type'] for p in processed)
+        for dtype, count in device_counts.items():
+            click.echo(f"   • {dtype}: {count} vulnerabilities")
+        
+        # Step 4: Store in database
+        click.echo("💾 Step 4/4: Storing in database...")
+        with get_db_session() as session:
+            # Clear existing vulnerabilities (full refresh)
+            deleted = session.query(Vulnerability).delete()
+            click.echo(f"   Cleared {deleted} existing records")
+            
+            # Bulk insert new data
+            for p in processed:
+                vuln = Vulnerability(**p)
+                session.add(vuln)
+            
+            session.commit()
+            click.echo(f"   ✓ Stored {len(processed)} vulnerabilities")
+        
+        elapsed = time.time() - start_time
+        click.echo(f"\n✅ Sync complete in {elapsed:.1f} seconds!")
+        click.echo(f"   Now run: generate-report --from-db")
+        
+    except TenableAPIError as e:
+        click.echo(f"✗ Tenable API error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        logger.exception("sync-all failed")
+        sys.exit(1)
+
+
+@cli.command()
 @click.option("--fresh", is_flag=True, help="Fetch fresh data from API instead of using cache")
 def inspect_data(fresh):
     """Inspect available filter values in your Tenable data"""
@@ -326,8 +444,12 @@ def inspect_data(fresh):
 @click.option("--servers-only/--all-devices", default=True, help="Device scope: servers-only (default) or all-devices (includes workstations, printers, etc.)")
 @click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
 @click.option("--use-cache", is_flag=True, help="Use cached data if available (skip freshness check)")
-def generate_report(tag, severity, state, format, output, servers_only, fresh, use_cache):
+@click.option("--from-db", is_flag=True, help="Use pre-processed data from database (fastest, requires sync-all first)")
+def generate_report(tag, severity, state, format, output, servers_only, fresh, use_cache, from_db):
     """Generate vulnerability report"""
+    import time
+    start_time = time.time()
+    
     try:
         Config.validate()
         Config.ensure_reports_dir()
@@ -340,6 +462,7 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
         from src.cache import VulnCache
         
         # Parse filters
+
         filters = {}
         
         if tag:
@@ -368,85 +491,126 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
             state_list = ["ACTIVE", "RESURFACED"]  # Default: current active vulnerabilities
             click.echo(f"Filter: state = {state_list} (default)")
         
-        # Check cache
-        cache = VulnCache()
-        raw_vulns = None
-        used_cache = False
-        
-        if not fresh:
-            cache_info = cache.get_info(filters)
+        # === Database Mode (--from-db) ===
+        if from_db:
+            click.echo("\n⚡ Using pre-processed data from database...")
+            from src.database.models import Vulnerability
             
-            if cache_info:
-                age_hours = cache_info['age_hours']
-                count = cache_info['count']
-                timestamp = cache_info['timestamp']
+            with get_db_session() as session:
+                query = session.query(Vulnerability)
                 
-                click.echo("\n💾 Cached data found:")
-                click.echo(f"   Date: {timestamp}")
-                click.echo(f"   Age: {age_hours:.1f} hours")
-                click.echo(f"   Count: {count} vulnerabilities")
+                # Apply filters
+                if servers_only:
+                    query = query.filter(Vulnerability.device_type == 'server')
+                    click.echo("  Filter: device_type = server")
                 
-                if use_cache or (not cache_info['is_stale'] and click.confirm("Use cached data?", default=True)):
-                    cached_data = cache.get(filters)
-                    if cached_data:
-                        raw_vulns = cached_data['vulnerabilities']
-                        used_cache = True
-                        click.echo("✓ Using cached data")
+                if severity_list:
+                    severity_upper = [s.capitalize() for s in severity_list]
+                    query = query.filter(Vulnerability.severity.in_(severity_upper))
+                    click.echo(f"  Filter: severity in {severity_upper}")
+                
+                if state_list:
+                    query = query.filter(Vulnerability.state.in_(state_list))
+                    click.echo(f"  Filter: state in {state_list}")
+                
+                db_vulns = query.all()
+                
+                if not db_vulns:
+                    click.echo("✗ No vulnerabilities found in database matching filters")
+                    click.echo("  Tip: Run 'sync-all' first to populate the database")
+                    sys.exit(0)
+                
+                # Convert to dict format
+                vulns = [v.to_dict() for v in db_vulns]
+                click.echo(f"✓ Loaded {len(vulns)} vulnerabilities from database")
+                
+                # Skip directly to processing (data is already normalized and classified)
+                elapsed = time.time() - start_time
+                click.echo(f"  ⏱️  Data load time: {elapsed:.2f}s")
         
-        # Fetch from API if not using cache
-        if raw_vulns is None:
-            click.echo("Fetching vulnerabilities from Tenable...")
-            client = TenableExporter()
-            raw_vulns = client.export_vulnerabilities(filters)
+        # === Normal Mode (API/Cache) ===
+        else:
+            # Check cache
+            cache = VulnCache()
+            raw_vulns = None
+            used_cache = False
             
-            # Cache the data
-            click.echo("💾 Caching vulnerability data for future use...")
-            cache.set(filters, raw_vulns)
-        
-        if not raw_vulns:
-            click.echo("✗ No vulnerabilities found matching filters")
-            sys.exit(0)
+            if not fresh:
+                cache_info = cache.get_info(filters)
+                
+                if cache_info:
+                    age_hours = cache_info['age_hours']
+                    count = cache_info['count']
+                    timestamp = cache_info['timestamp']
+                    
+                    click.echo("\n💾 Cached data found:")
+                    click.echo(f"   Date: {timestamp}")
+                    click.echo(f"   Age: {age_hours:.1f} hours")
+                    click.echo(f"   Count: {count} vulnerabilities")
+                    
+                    if use_cache or (not cache_info['is_stale'] and click.confirm("Use cached data?", default=True)):
+                        cached_data = cache.get(filters)
+                        if cached_data:
+                            raw_vulns = cached_data['vulnerabilities']
+                            used_cache = True
+                            click.echo("✓ Using cached data")
             
+            # Fetch from API if not using cache
+            if raw_vulns is None:
+                click.echo("Fetching vulnerabilities from Tenable...")
+                client = TenableExporter()
+                raw_vulns = client.export_vulnerabilities(filters)
+                
+                # Cache the data
+                click.echo("💾 Caching vulnerability data for future use...")
+                cache.set(filters, raw_vulns)
+            
+            if not raw_vulns:
+                click.echo("✗ No vulnerabilities found matching filters")
+                sys.exit(0)
+                
 
+            
+            click.echo(f"✓ {'Using' if used_cache else 'Fetched'} {len(raw_vulns)} vulnerabilities")
+            
+            # Normalize data
+            click.echo("Normalizing vulnerability data...")
+            vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
+            click.echo(f"  ➜ After normalization: {len(vulns)} vulnerabilities")
         
-        click.echo(f"✓ {'Using' if used_cache else 'Fetched'} {len(raw_vulns)} vulnerabilities")
-        
-        # Normalize data
-        click.echo("Normalizing vulnerability data...")
-        vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
-        click.echo(f"  ➜ After normalization: {len(vulns)} vulnerabilities")
-        
-        # Filter by device type (servers only by default)
-        if servers_only:
-            from src.utils.device_detector import DeviceTypeDetector
-            detector = DeviceTypeDetector()
-            original_count = len(vulns)
-            vulns = [v for v in vulns if detector.is_server(v.get('operating_system'))]
-            filtered_count = original_count - len(vulns)
-            click.echo(f"  ➜ After servers-only filter: {len(vulns)} vulnerabilities (removed {filtered_count})")
-            if len(vulns) == 0:
-                click.echo(f"  ⚠️  WARNING: No servers detected! Your OS values might not match server patterns.")
-                click.echo(f"  💡 Try running with --all-devices to see all data")
-                # Show sample OS values for debugging
-                from collections import Counter
-                raw_os_values = [v.get('operating_system') for v in VulnerabilityNormalizer.normalize_batch(raw_vulns)]
-                unique_os = Counter(str(os) for os in raw_os_values if os)
-                click.echo(f"\n  📋 Sample OS values in your data (top 5):")
-                for os_val, cnt in unique_os.most_common(5):
-                    device_type = detector.detect_device_type(os_val)
-                    click.echo(f"     '{os_val}' -> classified as: {device_type} ({cnt} vulns)")
+        # Filter by device type and state (skip if using --from-db, already filtered)
+        if not from_db:
+            # Filter by device type (servers only by default)
+            if servers_only:
+                from src.utils.device_detector import DeviceTypeDetector
+                detector = DeviceTypeDetector()
+                original_count = len(vulns)
+                vulns = [v for v in vulns if detector.is_server(v.get('operating_system'))]
+                filtered_count = original_count - len(vulns)
+                click.echo(f"  ➜ After servers-only filter: {len(vulns)} vulnerabilities (removed {filtered_count})")
+                if len(vulns) == 0:
+                    click.echo(f"  ⚠️  WARNING: No servers detected! Your OS values might not match server patterns.")
+                    click.echo(f"  💡 Try running with --all-devices to see all data")
+                    # Show sample OS values for debugging
+                    from collections import Counter
+                    raw_os_values = [v.get('operating_system') for v in VulnerabilityNormalizer.normalize_batch(raw_vulns)]
+                    unique_os = Counter(str(os) for os in raw_os_values if os)
+                    click.echo(f"\n  📋 Sample OS values in your data (top 5):")
+                    for os_val, cnt in unique_os.most_common(5):
+                        device_type = detector.detect_device_type(os_val)
+                        click.echo(f"     '{os_val}' -> classified as: {device_type} ({cnt} vulns)")
 
-        
-        
-        # Apply state filtering on normalized data
-        if state_list:
-            original_count = len(vulns)
-            vulns = [v for v in vulns if v.get('state', '').upper() in state_list]
-            filtered_count = original_count - len(vulns)
-            click.echo(f"  ➜ After state filter: {len(vulns)} vulnerabilities (removed {filtered_count})")
-            if len(vulns) == 0:
-                click.echo(f"  ⚠️  WARNING: State filter removed all data!")
-                click.echo(f"  💡 Available states: run 'inspect-data' to see what states exist")
+            
+            
+            # Apply state filtering on normalized data
+            if state_list:
+                original_count = len(vulns)
+                vulns = [v for v in vulns if v.get('state', '').upper() in state_list]
+                filtered_count = original_count - len(vulns)
+                click.echo(f"  ➜ After state filter: {len(vulns)} vulnerabilities (removed {filtered_count})")
+                if len(vulns) == 0:
+                    click.echo(f"  ⚠️  WARNING: State filter removed all data!")
+                    click.echo(f"  💡 Available states: run 'inspect-data' to see what states exist")
         
         if not vulns:
             click.echo("✗ No vulnerabilities found matching filters")
@@ -456,10 +620,11 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
                 click.echo("  Tip: Remove --state filter or use different state values")
             sys.exit(0)
         
-        # Vendor Detection
-        click.echo("Detecting vendors and products...")
-        detector = VendorDetector()
-        vulns = detector.enrich_vulnerabilities(vulns)
+        # Vendor Detection (skip if using --from-db, already enriched)
+        if not from_db:
+            click.echo("Detecting vendors and products...")
+            detector = VendorDetector()
+            vulns = detector.enrich_vulnerabilities(vulns)
         
         # Quick Wins Detection
         click.echo("Detecting quick wins...")

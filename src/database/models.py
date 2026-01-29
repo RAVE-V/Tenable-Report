@@ -131,3 +131,78 @@ class ReportRun(Base):
     
     def __repr__(self):
         return f"<ReportRun(run_id='{self.run_id}', timestamp='{self.timestamp}', total_vulns={self.total_vulns})>"
+
+
+class Vulnerability(Base):
+    """Pre-processed vulnerability data for fast report generation"""
+    __tablename__ = "vulnerabilities"
+    
+    # Primary key - composite of asset and plugin
+    vuln_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    # Asset info
+    asset_uuid = Column(String(255), index=True)
+    hostname = Column(String(255), index=True)
+    ipv4 = Column(String(45))
+    operating_system = Column(String(255))
+    device_type = Column(String(50), index=True)  # Pre-classified: server, workstation, network, unknown
+    
+    # Vulnerability info
+    plugin_id = Column(String(50), index=True)
+    plugin_name = Column(String(500))
+    severity = Column(String(20), index=True)  # Critical, High, Medium, Low, Info
+    state = Column(String(20), index=True)  # ACTIVE, RESURFACED, NEW, FIXED
+    
+    # CVE and scoring
+    cve = Column(JSON)  # List of CVEs
+    vpr_score = Column(Float)
+    cvss_score = Column(Float)
+    exploit_available = Column(Boolean, default=False)
+    
+    # Vendor detection (pre-computed)
+    vendor = Column(String(255), index=True)
+    product = Column(String(255))
+    
+    # Solution and description
+    solution = Column(Text)
+    description = Column(Text)
+    
+    # Timestamps
+    first_found = Column(DateTime)
+    last_found = Column(DateTime)
+    synced_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Store full raw data for reference
+    raw_data = Column(JSON)
+    
+    # Unique constraint: one entry per asset + plugin combination
+    __table_args__ = (
+        UniqueConstraint("asset_uuid", "plugin_id", name="uq_asset_plugin"),
+    )
+    
+    def __repr__(self):
+        return f"<Vulnerability(hostname='{self.hostname}', plugin_id='{self.plugin_id}', severity='{self.severity}')>"
+    
+    def to_dict(self) -> dict:
+        """Convert to dictionary for report generation"""
+        return {
+            'asset_uuid': self.asset_uuid,
+            'hostname': self.hostname,
+            'ipv4': self.ipv4,
+            'operating_system': self.operating_system,
+            'device_type': self.device_type,
+            'plugin_id': self.plugin_id,
+            'plugin_name': self.plugin_name,
+            'severity': self.severity,
+            'state': self.state,
+            'cve': self.cve or [],
+            'vpr_score': self.vpr_score,
+            'cvss_score': self.cvss_score,
+            'exploit_available': self.exploit_available,
+            'vendor': self.vendor,
+            'product': self.product,
+            'solution': self.solution,
+            'description': self.description,
+            'first_found': self.first_found.isoformat() if self.first_found else None,
+            'last_found': self.last_found.isoformat() if self.last_found else None,
+        }
