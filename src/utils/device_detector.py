@@ -18,18 +18,25 @@ class DeviceTypeDetector:
         re.compile(r'windows\s+2022', re.IGNORECASE),
         re.compile(r'windows\s+2025', re.IGNORECASE),
         
-        # Linux/Unix Servers
+        # Linux/Unix Server Distributions
         re.compile(r'ubuntu\s+server', re.IGNORECASE),
+        re.compile(r'ubuntu', re.IGNORECASE),  # Most Ubuntu is server unless specified as Desktop
         re.compile(r'red\s+hat', re.IGNORECASE),
         re.compile(r'rhel', re.IGNORECASE),
         re.compile(r'centos', re.IGNORECASE),
+        re.compile(r'rocky\s+linux', re.IGNORECASE),
+        re.compile(r'almalinux', re.IGNORECASE),
         re.compile(r'debian', re.IGNORECASE),
-        re.compile(r'fedora\s+server', re.IGNORECASE),
+        re.compile(r'fedora', re.IGNORECASE),
         re.compile(r'oracle\s+linux', re.IGNORECASE),
         re.compile(r'suse\s+linux', re.IGNORECASE),
+        re.compile(r'opensuse', re.IGNORECASE),
         re.compile(r'amazon\s+linux', re.IGNORECASE),
+        re.compile(r'arch\s+linux', re.IGNORECASE),
+        re.compile(r'kali\s+linux', re.IGNORECASE),
+        re.compile(r'linux', re.IGNORECASE),  # Generic Linux is likely server
         
-        # Generic Server Indicator (must be last)
+        # Generic Server Indicator (must be last to catch anything with "server")
         re.compile(r'server', re.IGNORECASE),
     ]
     
