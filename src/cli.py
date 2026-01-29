@@ -197,9 +197,27 @@ def inspect_data(fresh):
                 else:
                     os_values.append(os_val)
         os_list = Counter(os_values)
-        click.echo(f"\n💻 TOP 10 OPERATING SYSTEMS")
-        for os, count in os_list.most_common(10):
-            click.echo(f"   {os}: {count}")
+        
+        # Also count unique devices per OS
+        from collections import defaultdict
+        os_to_devices = defaultdict(set)
+        for v in vulns:
+            os_val = v.get('operating_system')
+            asset_uuid = v.get('asset_uuid')
+            if os_val and asset_uuid:
+                if isinstance(os_val, list):
+                    for os_item in os_val:
+                        os_to_devices[os_item].add(asset_uuid)
+                else:
+                    os_to_devices[os_val].add(asset_uuid)
+        
+        click.echo(f"\n💻 ALL OPERATING SYSTEMS ({len(os_list)} unique OS types)")
+        click.echo(f"{'Operating System':<50} {'Devices':<10} {'Vulns':<10}")
+        click.echo("-" * 70)
+        for os, vuln_count in sorted(os_list.items(), key=lambda x: len(os_to_devices.get(x[0], set())), reverse=True):
+            device_count = len(os_to_devices.get(os, set()))
+            click.echo(f"{os:<50} {device_count:<10} {vuln_count:<10}")
+
         
         # Device Type Detection
         detector = DeviceTypeDetector()
