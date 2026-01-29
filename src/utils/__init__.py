@@ -1,5 +1,6 @@
 # Utils package
-from src.utils import measure_performance
+from src.utils.performance import measure_performance
 
 __all__ = ['measure_performance']
+
 
