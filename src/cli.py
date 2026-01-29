@@ -722,11 +722,19 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
         tag_suffix = f"_{tag.replace(':', '_')}" if tag else ""
         severity_suffix = f"_{'_'.join(severity_list)}" if severity else ""
         
+        # Calculate severity counts for stats row
+        severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+        for v in vulns:
+            sev = v.get("severity", "").lower()
+            if sev in severity_counts:
+                severity_counts[sev] += 1
+        
         metadata = {
             "filters": filters,
             "total_vulns": len(vulns),
             "total_assets": len(set(v["asset_uuid"] for v in vulns if v["asset_uuid"])),
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "severity_counts": severity_counts
         }
         
         if format in ["xlsx", "both"]:

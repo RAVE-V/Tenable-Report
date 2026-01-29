@@ -160,37 +160,124 @@ class MappingImporter:
         
         return stats
     
-    def export_template(self, output_path: Path):
-        """Export an Excel template with example data"""
-        template_data = {
-            'server_name': [
-                'web-prod-01.company.com',
-                'db-prod-02.company.com',
-                'app-prod-03.company.com'
-            ],
-            'application_name': [
-                'Payment Gateway',
-                'Customer Portal',
-                'Internal CRM'
-            ],
-            'confidence': [
-                'MANUAL',
-                'MANUAL',
-                'HIGH'
-            ],
-            'source': [
-                'IT Team',
-                'IT Team',
-                'CMDB'
-            ],
-            'updated_by': [
-                'john.doe',
-                'john.doe',
-                'jane.smith'
-            ]
-        }
+    def export_template(self, output_path: Path, include_existing: bool = True):
+        """Export an Excel template with actual servers and existing mappings
         
-        df = pd.DataFrame(template_data)
-        df.to_excel(output_path, index=False, sheet_name='Server-App Mappings')
+        Args:
+            output_path: Path for output Excel file
+            include_existing: If True, include existing mappings from database
+        """
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        
+        # Get existing servers and mappings from database
+        servers_data = []
+        
+        with get_db_session() as session:
+            # Get all servers
+            servers = session.query(Server).all()
+            
+            for server in servers:
+                # Check for existing mappings
+                mappings = session.query(ServerApplicationMap).filter_by(
+                    server_id=server.server_id
+                ).all()
+                
+                if mappings and include_existing:
+                    # Server has existing mappings
+                    for mapping in mappings:
+                        app = session.query(Application).filter_by(
+                            app_id=mapping.app_id
+                        ).first()
+                        servers_data.append({
+                            'server_name': server.hostname,
+                            'application_name': app.app_name if app else '',
+                            'confidence': mapping.confidence.name if mapping.confidence else 'MANUAL',
+                            'source': mapping.source or 'database',
+                            'updated_by': mapping.updated_by or ''
+                        })
+                else:
+                    # Server has no mapping - add with empty application
+                    servers_data.append({
+                        'server_name': server.hostname,
+                        'application_name': '',
+                        'confidence': 'MANUAL',
+                        'source': '',
+                        'updated_by': ''
+                    })
+        
+        # If no servers in DB, create example template
+        if not servers_data:
+            servers_data = [
+                {
+                    'server_name': 'web-prod-01.company.com',
+                    'application_name': 'Payment Gateway',
+                    'confidence': 'MANUAL',
+                    'source': 'IT Team',
+                    'updated_by': 'john.doe'
+                },
+                {
+                    'server_name': 'db-prod-02.company.com',
+                    'application_name': '',
+                    'confidence': 'MANUAL',
+                    'source': '',
+                    'updated_by': ''
+                }
+            ]
+            click.echo("ℹ️  No servers in database. Creating example template.")
+        
+        # Create DataFrame
+        df = pd.DataFrame(servers_data)
+        
+        # Sort: unmapped servers first (easier to fill), then by server name
+        df['has_mapping'] = df['application_name'].apply(lambda x: 0 if x else 1)
+        df = df.sort_values(['has_mapping', 'server_name'], ascending=[False, True])
+        df = df.drop('has_mapping', axis=1)
+        
+        # Write to Excel with formatting
+        with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Server-App Mappings')
+            
+            # Access the worksheet to add formatting
+            ws = writer.sheets['Server-App Mappings']
+            
+            # Style header row
+            header_fill = PatternFill(start_color='1E3A8A', end_color='1E3A8A', fill_type='solid')
+            header_font = Font(color='FFFFFF', bold=True)
+            
+            for cell in ws[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Highlight rows without application mapping (to be filled)
+            highlight_fill = PatternFill(start_color='FEF3C7', end_color='FEF3C7', fill_type='solid')
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_row=ws.max_row), start=2):
+                # Column B is application_name
+                if not row[1].value:  # No application name
+                    for cell in row:
+                        cell.fill = highlight_fill
+            
+            # Auto-adjust column widths
+            for column in ws.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                ws.column_dimensions[column_letter].width = min(max_length + 2, 50)
+        
+        # Count stats
+        total = len(df)
+        mapped = len(df[df['application_name'] != ''])
+        unmapped = total - mapped
         
         click.echo(f"✓ Template exported to: {output_path}")
+        click.echo(f"   Total servers: {total}")
+        click.echo(f"   Already mapped: {mapped} (existing mappings preserved)")
+        click.echo(f"   Needs mapping: {unmapped} (highlighted in yellow)")
+        click.echo(f"\n📝 Fill in the 'application_name' column for highlighted rows, then import:")
+        click.echo(f"   python -m src.cli import-mappings {output_path}")
