@@ -56,7 +56,7 @@ class MappingImporter:
         # Validate
         errors = self.validate_excel(df)
         if errors:
-            raise ValueError(f"Excel validation failed:\n" + "\n".join(f"  - {err}" for err in errors))
+            raise ValueError("Excel validation failed:\n" + "\n".join(f"  - {err}" for err in errors))
         
         stats = {
             'total_rows': len(df),

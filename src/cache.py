@@ -3,7 +3,7 @@
 import json
 import hashlib
 from pathlib import Path
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from src.config import Config
@@ -20,7 +20,7 @@ class VulnCache:
         """Generate cache key from filters"""
         # Sort keys for consistent hashing
         filter_str = json.dumps(filters, sort_keys=True)
-        return hashlib.md5(filter_str.encode()).hexdigest()
+        return hashlib.sha256(filter_str.encode()).hexdigest()
     
     def _get_cache_path(self, cache_key: str) -> Path:
         """Get cache file path"""

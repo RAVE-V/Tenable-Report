@@ -187,7 +187,7 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
                 count = cache_info['count']
                 timestamp = cache_info['timestamp']
                 
-                click.echo(f"\n💾 Cached data found:")
+                click.echo("\n💾 Cached data found:")
                 click.echo(f"   Date: {timestamp}")
                 click.echo(f"   Age: {age_hours:.1f} hours")
                 click.echo(f"   Count: {count} vulnerabilities")
@@ -228,7 +228,7 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
             filtered_count = original_count - len(vulns)
             if filtered_count > 0:
                 click.echo(f"✓ Filtered {filtered_count} non-server devices (servers only)")
-                click.echo(f"  Tip: Use --all-devices to include workstations and other devices")
+                click.echo("  Tip: Use --all-devices to include workstations and other devices")
         
         
         # Filter by state (ONLY if user explicitly specified states)
@@ -243,11 +243,11 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
             click.echo("✓ Keeping all vulnerabilities (no state filtering)")
         
         if not vulns:
-            click.echo(f"✗ No vulnerabilities found matching filters")
+            click.echo("✗ No vulnerabilities found matching filters")
             if servers_only:
-                click.echo(f"  Tip: Try --all-devices to include workstations")
+                click.echo("  Tip: Try --all-devices to include workstations")
             if state_list:
-                click.echo(f"  Tip: Remove --state filter or use different state values")
+                click.echo("  Tip: Remove --state filter or use different state values")
             sys.exit(0)
         
         # Vendor Detection
@@ -366,7 +366,7 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
                 count = cache_info['count']
                 timestamp = cache_info['timestamp']
                 
-                click.echo(f"\n💾 Cached data found:")
+                click.echo("\n💾 Cached data found:")
                 click.echo(f"   Date: {timestamp}")
                 click.echo(f"   Age: {age_hours:.1f} hours")
                 click.echo(f"   Count: {count} vulnerabilities")
@@ -416,9 +416,9 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
             click.echo(f"✓ Filtered {filtered_count} vulnerabilities (keeping only: {', '.join(state_list)})")
         
         if not vulns:
-            click.echo(f"✗ No vulnerabilities found matching filters")
+            click.echo("✗ No vulnerabilities found matching filters")
             if servers_only:
-                click.echo(f"  Tip: Try --all-devices to include workstations")
+                click.echo("  Tip: Try --all-devices to include workstations")
             sys.exit(0)
         
         # Vendor Detection
@@ -454,7 +454,7 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
             dtype = server_data.get("device_type", "unknown")
             device_types[dtype] = device_types.get(dtype, 0) + 1
         
-        click.echo(f"\n📊 Server Report Summary:")
+        click.echo("\n📊 Server Report Summary:")
         click.echo(f"   Total Devices: {stats['total_servers']}")
         if device_types:
             for dtype, count in sorted(device_types.items()):
@@ -481,7 +481,7 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
         
         if format in ["xlsx", "both"]:
             xlsx_path = output_dir / f"Server_Report_{timestamp}.xlsx"
-            click.echo(f"\nGenerating Excel report...")
+            click.echo("\nGenerating Excel report...")
             
             xlsx_gen = XLSXReportGenerator()
             xlsx_gen.generate_server_report(
@@ -495,10 +495,10 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
         
         if format in ["html", "both"]:
             # HTML server report would go here
-            click.echo(f"\n⚠️  HTML format for server reports coming soon!")
-            click.echo(f"   Use --format xlsx for now")
+            click.echo("\n⚠️  HTML format for server reports coming soon!")
+            click.echo("   Use --format xlsx for now")
         
-        click.echo(f"\n✓ Server report generation complete!")
+        click.echo("\n✓ Server report generation complete!")
     
     except TenableAPIError as e:
         click.echo(f"✗ Tenable API error: {e}", err=True)
@@ -678,7 +678,7 @@ def import_mappings(excel_file, dry_run):
             for error in stats['errors']:
                 click.echo(f"  - {error}")
         else:
-            click.echo(f"\n✓ All rows imported successfully!")
+            click.echo("\n✓ All rows imported successfully!")
         
     except ValueError as e:
         click.echo(f"✗ Validation error: {e}", err=True)
@@ -697,12 +697,12 @@ def export_mapping_template(output):
         from pathlib import Path
         from src.import_mappings import MappingImporter
         
-        click.echo(f"📋 Exporting template...")
+        click.echo("📋 Exporting template...")
         
         importer = MappingImporter()
         importer.export_template(Path(output))
         
-        click.echo(f"\n✓ Template ready! Fill it out and import using:")
+        click.echo("\n✓ Template ready! Fill it out and import using:")
         click.echo(f"   python -m src.cli import-mappings {output}")
         
     except Exception as e:
