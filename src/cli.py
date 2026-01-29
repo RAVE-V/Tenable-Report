@@ -41,7 +41,9 @@ def init():
 
 
 @cli.command()
-def sync_db():
+@click.option("--limit", type=int, default=None, help="Limit assets per chunk for testing (e.g., 10 for quick test)")
+@click.option("--days", type=int, default=None, help="Only fetch vulnerabilities from last N days (e.g., 7)")
+def sync_db(limit, days):
     """Sync assets from Tenable to local database"""
     try:
         Config.validate()
@@ -49,9 +51,27 @@ def sync_db():
         click.echo("Connecting to Tenable...")
         client = TenableExporter()
         
-        # Fetch all vulnerabilities to extract unique assets
+        # Build filters for limiting data
+        filters = {}
+        
+        if days:
+            from datetime import datetime, timedelta
+            cutoff_date = datetime.now() - timedelta(days=days)
+            # Tenable uses Unix timestamps
+            filters["last_found"] = int(cutoff_date.timestamp())
+            click.echo(f"Filter: Only vulnerabilities from last {days} days")
+        
+        # Fetch vulnerabilities (with optional limit)
         click.echo("Fetching vulnerability data to extract assets...")
-        vulns = client.export_vulnerabilities()
+        if limit:
+            click.echo(f"⚠️  TEST MODE: Limiting to {limit} assets per chunk for faster testing")
+            # Temporarily override the config
+            original_limit = Config.EXPORT_MAX_ASSETS_PER_CHUNK
+            Config.EXPORT_MAX_ASSETS_PER_CHUNK = limit
+            vulns = client.export_vulnerabilities(filters)
+            Config.EXPORT_MAX_ASSETS_PER_CHUNK = original_limit
+        else:
+            vulns = client.export_vulnerabilities(filters)
         
         # Extract unique assets
         assets_map = {}
