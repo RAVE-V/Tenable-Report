@@ -50,6 +50,9 @@ reports_test/
 !src/templates/*.html
 *.xlsx
 
+# Cache
+.cache/
+
 # Testing
 .pytest_cache/
 .coverage

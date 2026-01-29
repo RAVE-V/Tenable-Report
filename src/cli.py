@@ -132,17 +132,20 @@ def sync_db(limit, days):
 @click.option("--severity", help="Filter by severity (comma-separated: Critical,High,Medium,Low)")
 @click.option("--format", type=click.Choice(["xlsx", "html", "both"]), default="xlsx", help="Output format")
 @click.option("--output", type=click.Path(), default="./reports", help="Output directory")
-def generate_report(tag, severity, format, output):
+@click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
+@click.option("--use-cache", is_flag=True, help="Use cached data if available (skip freshness check)")
+def generate_report(tag, severity, format, output, fresh, use_cache):
     """Generate vulnerability report"""
     try:
         Config.validate()
         Config.ensure_reports_dir()
         
-        # Import Milestone 2 processors
+        # Import modules
         from src.processors.vendor_detector import VendorDetector
         from src.processors.quick_wins_detector import QuickWinsDetector
         from src.processors.grouper import VulnerabilityGrouper
         from src.report_generator import HTMLReportGenerator
+        from src.cache import VulnCache
         
         # Parse filters
         filters = {}
@@ -161,16 +164,46 @@ def generate_report(tag, severity, format, output):
             filters["severity"] = severity_list
             click.echo(f"Filter: severity = {severity_list}")
         
-        # Fetch vulnerabilities
-        click.echo("Fetching vulnerabilities from Tenable...")
-        client = TenableExporter()
-        raw_vulns = client.export_vulnerabilities(filters)
+        # Check cache
+        cache = VulnCache()
+        raw_vulns = None
+        used_cache = False
+        
+        if not fresh:
+            cache_info = cache.get_info(filters)
+            
+            if cache_info:
+                age_hours = cache_info['age_hours']
+                count = cache_info['count']
+                timestamp = cache_info['timestamp']
+                
+                click.echo(f"\n💾 Cached data found:")
+                click.echo(f"   Date: {timestamp}")
+                click.echo(f"   Age: {age_hours:.1f} hours")
+                click.echo(f"   Count: {count} vulnerabilities")
+                
+                if use_cache or (not cache_info['is_stale'] and click.confirm("Use cached data?", default=True)):
+                    cached_data = cache.get(filters)
+                    if cached_data:
+                        raw_vulns = cached_data['vulnerabilities']
+                        used_cache = True
+                        click.echo("✓ Using cached data")
+        
+        # Fetch from API if not using cache
+        if raw_vulns is None:
+            click.echo("Fetching vulnerabilities from Tenable...")
+            client = TenableExporter()
+            raw_vulns = client.export_vulnerabilities(filters)
+            
+            # Cache the data
+            click.echo("💾 Caching vulnerability data for future use...")
+            cache.set(filters, raw_vulns)
         
         if not raw_vulns:
             click.echo("✗ No vulnerabilities found matching filters")
             sys.exit(0)
         
-        click.echo(f"✓ Fetched {len(raw_vulns)} vulnerabilities")
+        click.echo(f"✓ {'Using' if used_cache else 'Fetched'} {len(raw_vulns)} vulnerabilities")
         
         # Normalize data
         click.echo("Normalizing vulnerability data...")

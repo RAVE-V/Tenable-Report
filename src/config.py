@@ -34,6 +34,10 @@ class Config:
     # Report Configuration
     REPORTS_OUTPUT_DIR = Path(os.getenv("REPORTS_OUTPUT_DIR", "./reports"))
     
+    # Cache Configuration
+    CACHE_DIR = Path(os.getenv("CACHE_DIR", "./.cache"))
+    CACHE_MAX_AGE_HOURS = int(os.getenv("CACHE_MAX_AGE_HOURS", "24"))
+    
     # API Settings
     API_MAX_RETRIES = int(os.getenv("TENABLE_API_RETRIES", "3"))
     API_RETRY_BACKOFF_FACTOR = float(os.getenv("TENABLE_RETRY_BACKOFF", "0.5"))
