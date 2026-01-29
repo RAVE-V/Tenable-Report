@@ -119,23 +119,11 @@ src.cli
 ├── import-mappings          # Import server-app mappings from Excel
 │   └── --dry-run            # Validate without saving
 │
-├── map-server               # Map single server to application
-│   ├── --hostname           # Server hostname (required)
-│   ├── --app                # Application name (required)
-│   ├── --confidence         # HIGH, MEDIUM, LOW, MANUAL
-│   └── --source             # Source of mapping
-│
-├── list-mappings            # List server-application mappings
-│   ├── --server             # Filter by server hostname
-│   └── --app                # Filter by application name
-│
-├── list-tags                # List available Tenable tags
-│
-├── seed-vendor-rules        # Populate vendor detection rules
-│
-└── inspect-data             # Inspect available filter values
+├── inspect-data             # Inspect available filter values
     └── --fresh              # Force refresh from API
 ```
+
+---
 
 ---
 
@@ -146,10 +134,7 @@ src.cli
 # 1. Initialize database tables
 python -m src.cli init
 
-# 2. Seed vendor detection rules
-python -m src.cli seed-vendor-rules
-
-# 3. Sync all data from Tenable
+# 2. Sync all data from Tenable (automatically seeds vendor rules)
 python -m src.cli sync-all
 
 # 4. Generate your first report
