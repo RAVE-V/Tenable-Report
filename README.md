@@ -73,96 +73,180 @@ python -m src.cli generate-report --from-db   # Instant reports!
 
 ---
 
-## 📖 Usage Guide
+## 📖 CLI Command Reference
 
-### Report Generation
-
+All commands are executed via:
 ```bash
-# Default: HTML report, servers only, ACTIVE + RESURFACED states
-python -m src.cli generate-report
+python -m src.cli [COMMAND] [OPTIONS]
+```
 
-# Filter by severity
+### Command Tree
+
+```
+src.cli
+├── init                     # Initialize database
+├── sync-all                 # Sync vulnerabilities to database (recommended)
+├── sync-db                  # Sync assets only
+│
+├── generate-report          # Generate HTML/Excel vulnerability report
+│   ├── --severity           # Filter: Critical,High,Medium,Low
+│   ├── --state              # Filter: ACTIVE,RESURFACED,NEW,FIXED
+│   ├── --tag                # Filter by Tenable tag
+│   ├── --format             # Output: html, xlsx, both
+│   ├── --output             # Output directory
+│   ├── --fresh              # Force API refresh
+│   ├── --use-cache          # Use cached data silently
+│   ├── --from-db            # Use pre-synced database (fastest)
+│   └── --all-devices        # Include workstations/network devices
+│
+├── server-report            # Server-focused report with drill-down
+│   ├── --severity           # Filter by severity
+│   ├── --state              # Filter by state
+│   ├── --format             # Output: html, xlsx, both
+│   ├── --sort-by            # Sort: total_vulns, critical, hostname
+│   ├── --min-vulns          # Minimum vulns to include
+│   └── --all-devices        # Include all device types
+│
+├── classify                 # Manage device type classifications
+│   ├── add [pattern] [type] # Add custom OS → device type rule
+│   ├── remove [pattern]     # Remove custom rule
+│   ├── list                 # List all custom rules
+│   └── test [os_string]     # Test classification for an OS string
+│
+├── export-mapping-template  # Export Excel for server-app mapping
+│   └── --output             # Output file path
+│
+├── import-mappings          # Import server-app mappings from Excel
+│   └── --dry-run            # Validate without saving
+│
+├── map-server               # Map single server to application
+│   ├── --hostname           # Server hostname (required)
+│   ├── --app                # Application name (required)
+│   ├── --confidence         # HIGH, MEDIUM, LOW, MANUAL
+│   └── --source             # Source of mapping
+│
+├── list-mappings            # List server-application mappings
+│   ├── --server             # Filter by server hostname
+│   └── --app                # Filter by application name
+│
+├── list-tags                # List available Tenable tags
+│
+├── seed-vendor-rules        # Populate vendor detection rules
+│
+└── inspect-data             # Inspect available filter values
+    └── --fresh              # Force refresh from API
+```
+
+---
+
+## 🚀 Quick Start Workflows
+
+### First-Time Setup
+```bash
+# 1. Initialize database tables
+python -m src.cli init
+
+# 2. Seed vendor detection rules
+python -m src.cli seed-vendor-rules
+
+# 3. Sync all data from Tenable
+python -m src.cli sync-all
+
+# 4. Generate your first report
+python -m src.cli generate-report --from-db
+```
+
+### Daily Report Generation (Fastest)
+```bash
+# Option 1: Use pre-synced database (<1 second)
+python -m src.cli generate-report --from-db
+
+# Option 2: Critical/High only
+python -m src.cli generate-report --from-db --severity Critical,High
+
+# Option 3: Both HTML and Excel
+python -m src.cli generate-report --from-db --format both
+```
+
+### Server Mapping Workflow
+```bash
+# 1. Export server list to Excel (includes existing mappings)
+python -m src.cli export-mapping-template --output server_mappings.xlsx
+
+# 2. Fill in 'application_name' column in Excel (yellow = needs mapping)
+
+# 3. Validate import (dry run)
+python -m src.cli import-mappings server_mappings.xlsx --dry-run
+
+# 4. Import mappings
+python -m src.cli import-mappings server_mappings.xlsx
+
+# 5. Generate report with application grouping
+python -m src.cli generate-report --from-db
+```
+
+### Device Classification
+```bash
+# Test how an OS is classified
+python -m src.cli classify test "Windows Server 2022 Datacenter"
+# Output: server
+
+# Add custom rule for unrecognized OS
+python -m src.cli classify add "My Custom Appliance" network
+
+# View all custom rules
+python -m src.cli classify list
+```
+
+---
+
+## 📊 Report Generation Options
+
+### Filtering Examples
+```bash
+# By severity
 python -m src.cli generate-report --severity Critical,High
 
-# Include all devices (workstations, printers, etc.)
+# By state (default: ACTIVE,RESURFACED)
+python -m src.cli generate-report --state ACTIVE,RESURFACED,NEW
+
+# By Tenable tag
+python -m src.cli generate-report --tag "Production Servers"
+
+# Include all devices (not just servers)
 python -m src.cli generate-report --all-devices
 
-# Excel format
+# Combine filters
+python -m src.cli generate-report --from-db --severity Critical --state ACTIVE
+```
+
+### Output Formats
+```bash
+# HTML only (default)
+python -m src.cli generate-report --format html
+
+# Excel only
 python -m src.cli generate-report --format xlsx
 
 # Both HTML and Excel
 python -m src.cli generate-report --format both
 
-# Use cached data without prompts
+# Custom output directory
+python -m src.cli generate-report --output ./my-reports/
+```
+
+### Data Source Options
+```bash
+# From database (fastest, <1 second)
+python -m src.cli generate-report --from-db
+
+# From cache (no prompts)
 python -m src.cli generate-report --use-cache
 
-# Force fresh data from API
+# Force fresh from API
 python -m src.cli generate-report --fresh
 ```
 
-### ⚡ High-Speed Mode (Database)
-
-For instant report generation, use the database-driven workflow:
-
-```bash
-# Step 1: Sync all data to database (run once, or schedule daily)
-python -m src.cli sync-all
-
-# Step 2: Generate reports instantly (<1 second)
-python -m src.cli generate-report --from-db
-python -m src.cli generate-report --from-db --severity Critical,High
-python -m src.cli generate-report --from-db --all-devices
-```
-
-**What `sync-all` does:**
-1. Fetches vulnerabilities from Tenable API (uses cache if available)
-2. Normalizes and validates all data
-3. Classifies devices (server/workstation/network)
-4. Detects vendors and products
-5. Stores pre-processed data in SQLite database
-
-### Device Classification
-
-```bash
-# Test how an OS string is classified
-python -m src.cli classify test "Windows Server 2022 Datacenter"
-
-# Add custom classification rule
-python -m src.cli classify add "My Custom OS" server
-
-# List all custom rules
-python -m src.cli classify list
-
-# Remove a custom rule
-python -m src.cli classify remove "My Custom OS"
-```
-
-### Server-Application Mapping
-
-```bash
-# Export template Excel file
-python -m src.cli export-mapping-template
-
-# Import mappings from Excel
-python -m src.cli import-mappings server_app_mapping.xlsx
-
-# Dry run (preview without saving)
-python -m src.cli import-mappings server_app_mapping.xlsx --dry-run
-
-# List current mappings
-python -m src.cli list-mappings
-python -m src.cli list-mappings --server "web-server-01"
-```
-
-### Data Inspection
-
-```bash
-# Inspect available filter values
-python -m src.cli inspect-data
-
-# Force fresh inspection
-python -m src.cli inspect-data --fresh
-```
 
 ---
 
