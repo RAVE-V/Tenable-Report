@@ -412,5 +412,69 @@ def seed_vendor_rules():
         sys.exit(1)
 
 
+@cli.command()
+@click.argument("excel_file", type=click.Path(exists=True))
+@click.option("--dry-run", is_flag=True, help="Validate without saving to database")
+def import_mappings(excel_file, dry_run):
+    """Import server-to-application mappings from Excel file"""
+    try:
+        from pathlib import Path
+        from src.import_mappings import MappingImporter
+        
+        click.echo(f"📂 Importing mappings from: {excel_file}\n")
+        
+        importer = MappingImporter()
+        stats = importer.import_from_excel(Path(excel_file), dry_run=dry_run)
+        
+        # Print summary
+        click.echo("\n" + "="*60)
+        click.echo("📊 IMPORT SUMMARY")
+        click.echo("="*60)
+        click.echo(f"Total rows processed: {stats['total_rows']}")
+        click.echo(f"Servers created: {stats['servers_created']}")
+        click.echo(f"Servers found: {stats['servers_found']}")
+        click.echo(f"Applications created: {stats['apps_created']}")
+        click.echo(f"Applications found: {stats['apps_found']}")
+        click.echo(f"Mappings created: {stats['mappings_created']}")
+        click.echo(f"Mappings updated: {stats['mappings_updated']}")
+        
+        if stats['errors']:
+            click.echo(f"\n⚠️  Errors: {len(stats['errors'])}")
+            for error in stats['errors']:
+                click.echo(f"  - {error}")
+        else:
+            click.echo(f"\n✓ All rows imported successfully!")
+        
+    except ValueError as e:
+        click.echo(f"✗ Validation error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        logger.exception("import-mappings failed")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--output", type=click.Path(), default="./server_app_mapping_template.xlsx", help="Output file path")
+def export_mapping_template(output):
+    """Export an Excel template for server-application mappings"""
+    try:
+        from pathlib import Path
+        from src.import_mappings import MappingImporter
+        
+        click.echo(f"📋 Exporting template...")
+        
+        importer = MappingImporter()
+        importer.export_template(Path(output))
+        
+        click.echo(f"\n✓ Template ready! Fill it out and import using:")
+        click.echo(f"   python -m src.cli import-mappings {output}")
+        
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        logger.exception("export-mapping-template failed")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     cli()
