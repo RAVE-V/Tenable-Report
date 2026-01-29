@@ -91,10 +91,18 @@ class TenableExporter:
         
         # Step 2: Poll for job completion
         status = self._poll_export_status(export_uuid)
-        logger.info(f"Export job completed. Chunks available: {status['chunks_available']}")
+        
+        # Handle chunks_available - it might be a list or an integer
+        chunks_available = status["chunks_available"]
+        if isinstance(chunks_available, list):
+            chunks_count = chunks_available[0] if chunks_available else 0
+        else:
+            chunks_count = chunks_available
+        
+        logger.info(f"Export job completed. Chunks available: {chunks_count}")
         
         # Step 3: Download chunks in parallel
-        vulnerabilities = self._download_chunks(export_uuid, status["chunks_available"])
+        vulnerabilities = self._download_chunks(export_uuid, chunks_count)
         logger.info(f"Downloaded {len(vulnerabilities)} vulnerabilities")
         
         return vulnerabilities
