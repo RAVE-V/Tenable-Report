@@ -214,6 +214,12 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
         if not raw_vulns:
             click.echo("✗ No vulnerabilities found matching filters")
             sys.exit(0)
+            
+        # Debug: Save first few raw records to a file for the user to inspect
+        import json
+        with open("debug_raw_data.json", "w") as f:
+            json.dump(raw_vulns[:5], f, indent=2)
+        click.echo("🔍 Saved first 5 raw records to debug_raw_data.json for inspection")
         
         click.echo(f"✓ {'Using' if used_cache else 'Fetched'} {len(raw_vulns)} vulnerabilities")
         
