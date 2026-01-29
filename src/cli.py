@@ -79,18 +79,18 @@ def sync_db(limit, days):
             if asset_uuid and asset_uuid not in assets_map:
                 asset = vuln.get("asset", {})
                 
-                # Handle ipv4 - can be a list or string
-                ipv4_value = asset.get("ipv4")
-                if isinstance(ipv4_value, list):
-                    ipv4_str = ", ".join(ipv4_value) if ipv4_value else None
-                else:
-                    ipv4_str = ipv4_value
+                # Helper function to convert list fields to strings
+                def to_string(value):
+                    """Convert list to comma-separated string, or return as-is"""
+                    if isinstance(value, list):
+                        return ", ".join(str(v) for v in value if v) if value else None
+                    return value
                 
                 assets_map[asset_uuid] = {
                     "asset_uuid": asset_uuid,
-                    "hostname": asset.get("hostname"),
-                    "ipv4": ipv4_str,
-                    "operating_system": asset.get("operating_system"),
+                    "hostname": to_string(asset.get("hostname")),
+                    "ipv4": to_string(asset.get("ipv4")),
+                    "operating_system": to_string(asset.get("operating_system")),
                     "last_seen": datetime.now(timezone.utc)
                 }
         
