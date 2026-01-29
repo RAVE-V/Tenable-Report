@@ -133,9 +133,10 @@ def sync_db(limit, days):
 @click.option("--state", help="Filter by state (comma-separated: ACTIVE,RESURFACED,NEW). Default: ACTIVE only")
 @click.option("--format", type=click.Choice(["xlsx", "html", "both"]), default="xlsx", help="Output format")
 @click.option("--output", type=click.Path(), default="./reports", help="Output directory")
+@click.option("--servers-only/--all-devices", default=True, help="Only include servers (default) or all devices")
 @click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
 @click.option("--use-cache", is_flag=True, help="Use cached data if available (skip freshness check)")
-def generate_report(tag, severity, state, format, output, fresh, use_cache):
+def generate_report(tag, severity, state, format, output, servers_only, fresh, use_cache):
     """Generate vulnerability report"""
     try:
         Config.validate()
@@ -215,6 +216,17 @@ def generate_report(tag, severity, state, format, output, fresh, use_cache):
         # Normalize data
         click.echo("Normalizing vulnerability data...")
         vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
+        
+        # Filter by device type (servers only by default)
+        if servers_only:
+            from src.utils.device_detector import DeviceTypeDetector
+            detector = DeviceTypeDetector()
+            original_count = len(vulns)
+            vulns = [v for v in vulns if detector.is_server(v.get('operating_system'))]
+            filtered_count = original_count - len(vulns)
+            if filtered_count > 0:
+                click.echo(f"✓ Filtered {filtered_count} non-server devices (servers only)")
+                click.echo(f"  Tip: Use --all-devices to include workstations and other devices")
         
         # Filter by state (default: ACTIVE only)
         # Note: If state field is missing, treat as ACTIVE
@@ -378,6 +390,16 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
         click.echo("Normalizing vulnerability data...")
         vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
         
+        # Filter by device type (servers only by default)
+        if servers_only:
+            from src.utils.device_detector import DeviceTypeDetector
+            detector = DeviceTypeDetector()
+            original_count = len(vulns)
+            vulns = [v for v in vulns if detector.is_server(v.get('operating_system'))]
+            filtered_count = original_count - len(vulns)
+            if filtered_count > 0:
+                click.echo(f"✓ Filtered {filtered_count} non-server devices (servers only)")
+        
         # Filter by state
         original_count = len(vulns)
         vulns = [v for v in vulns if v.get('state', 'ACTIVE').upper() in state_list]
@@ -386,8 +408,9 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
             click.echo(f"✓ Filtered {filtered_count} vulnerabilities (keeping only: {', '.join(state_list)})")
         
         if not vulns:
-            click.echo(f"✗ No vulnerabilities found with state: {', '.join(state_list)}")
-            click.echo(f"  Tip: Try --state ACTIVE,RESURFACED,NEW or use --fresh to re-download data")
+            click.echo(f"✗ No vulnerabilities found matching filters")
+            if servers_only:
+                click.echo(f"  Tip: Try --all-devices to include workstations")
             sys.exit(0)
         
         # Vendor Detection
@@ -400,10 +423,10 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
         quick_wins_detector = QuickWinsDetector()
         quick_wins_detector.detect_quick_wins(vulns)
         
-        # Group by Server
+        # Group by Server (no additional filtering - already filtered above)
         device_filter = "servers only" if servers_only else "all devices"
-        click.echo(f"Grouping by server ({device_filter}, sort by: {sort_by})...")
-        server_grouper = ServerGrouper(servers_only=servers_only)
+        click.echo(f"Grouping by device ({device_filter}, sort by: {sort_by})...")
+        server_grouper = ServerGrouper(servers_only=False)  # Don't re-filter, already filtered
         servers = server_grouper.group_by_server(vulns)
         
         # Filter by minimum vulnerabilities
