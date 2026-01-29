@@ -161,10 +161,12 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
                 click.echo("✗ Invalid tag format. Use Category:Value", err=True)
                 sys.exit(1)
         
-        if severity:
-            severity_list = [s.strip().lower() for s in severity.split(",")]
-            filters["severity"] = severity_list
-            click.echo(f"Filter: severity = {severity_list}")
+        # TESTING: Severity filtering disabled
+        # if severity:
+        #     severity_list = [s.strip().lower() for s in severity.split(",")]
+        #     filters["severity"] = severity_list
+        #     click.echo(f"Filter: severity = {severity_list}")
+        click.echo("Filter: severity = ALL (disabled for testing)")
         
         # Default to ALL states if not specified (Tenable API state field is unreliable)
         if state:
@@ -231,16 +233,8 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
                 click.echo("  Tip: Use --all-devices to include workstations and other devices")
         
         
-        # Filter by state (ONLY if user explicitly specified states)
-        if state_list is not None:
-            original_count = len(vulns)
-            # Filter, treating missing state as valid (keep it)
-            vulns = [v for v in vulns if not v.get('state') or str(v.get('state')).upper() in state_list]
-            if len(vulns) < original_count:
-                filtered_count = original_count - len(vulns)
-                click.echo(f"✓ Filtered {filtered_count} vulnerabilities (keeping only: {', '.join(state_list)})")
-        else:
-            click.echo("✓ Keeping all vulnerabilities (no state filtering)")
+        # TESTING: State filtering completely disabled
+        click.echo("✓ State filtering disabled for testing - keeping ALL vulnerabilities")
         
         if not vulns:
             click.echo("✗ No vulnerabilities found matching filters")
