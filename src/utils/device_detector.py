@@ -58,7 +58,7 @@ class DeviceTypeDetector:
         Returns:
             Device type: 'server', 'workstation', 'network', or 'unknown'
         """
-        if not operating_system:
+        if not operating_system or not isinstance(operating_system, str):
             return 'unknown'
         
         # Check for servers first (more specific)
