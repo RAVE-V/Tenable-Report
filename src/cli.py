@@ -186,8 +186,17 @@ def inspect_data(fresh):
         for sev, count in severities.most_common():
             click.echo(f"   {sev}: {count}")
         
-        # Operating Systems
-        os_list = Counter(v.get('operating_system', 'Unknown') for v in vulns if v.get('operating_system'))
+        # Operating Systems (handle both strings and lists)
+        os_values = []
+        for v in vulns:
+            os_val = v.get('operating_system')
+            if os_val:
+                # Handle if it's a list
+                if isinstance(os_val, list):
+                    os_values.extend(os_val)
+                else:
+                    os_values.append(os_val)
+        os_list = Counter(os_values)
         click.echo(f"\n💻 TOP 10 OPERATING SYSTEMS")
         for os, count in os_list.most_common(10):
             click.echo(f"   {os}: {count}")
@@ -261,12 +270,12 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
         else:
             click.echo("Filter: severity = ALL")
         
-        # Parse state filter - default to ACTIVE, RESURFACED, NEW
+        # Parse state filter - default to ACTIVE and RESURFACED (most common states)
         if state:
             state_list = [s.strip().upper() for s in state.split(",")]
             click.echo(f"Filter: state = {state_list}")
         else:
-            state_list = ["ACTIVE", "RESURFACED", "NEW"]  # Default includes all active vulnerabilities
+            state_list = ["ACTIVE", "RESURFACED"]  # Default: current active vulnerabilities
             click.echo(f"Filter: state = {state_list} (default)")
         
         # Check cache
