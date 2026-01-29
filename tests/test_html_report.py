@@ -49,7 +49,8 @@ def test_html_report():
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "total_vulns": len(vulns),
         "total_assets": len(set(v["asset_uuid"] for v in vulns if v.get("asset_uuid"))),
-        "filters": {}
+        "filters": {},
+        "severity_counts": {"critical": 5, "high": 10, "medium": 15, "low": 20} # Mock counts
     }
     
     html_gen = HTMLReportGenerator()

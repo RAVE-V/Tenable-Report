@@ -75,17 +75,18 @@ class VulnerabilityNormalizer:
         return [VulnerabilityNormalizer.normalize(vuln) for vuln in raw_vulns]
     
     @staticmethod
-    def _parse_date(date_str: Optional[str]) -> Optional[str]:
-        """Parse date string from Tenable format"""
+    def _parse_date(date_str: Optional[str]) -> Optional[datetime]:
+        """Parse date string from Tenable format to datetime object"""
         if not date_str:
             return None
         
         try:
             # Tenable typically returns ISO format dates
-            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-            return dt.strftime("%Y-%m-%d %H:%M:%S")
+            dt = datetime.fromisoformat(str(date_str).replace("Z", "+00:00"))
+            return dt
         except (ValueError, AttributeError):
-            return date_str
+            logger.warning(f"Failed to parse date: {date_str}")
+            return None
 
     @staticmethod
     def _map_state(state: str) -> str:

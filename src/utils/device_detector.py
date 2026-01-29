@@ -26,7 +26,7 @@ class DeviceTypeDetector:
         re.compile(r'standard\s+edition', re.IGNORECASE),  # Windows Standard editions
         
         # Linux/Unix Server Distributions
-        re.compile(r'ubuntu', re.IGNORECASE),
+        re.compile(r'ubuntu(?!.*desktop)', re.IGNORECASE),
         re.compile(r'red\s*hat', re.IGNORECASE),
         re.compile(r'rhel', re.IGNORECASE),
         re.compile(r'centos', re.IGNORECASE),
