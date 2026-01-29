@@ -474,14 +474,16 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
                 click.echo("✗ Invalid tag format. Use Category:Value", err=True)
                 sys.exit(1)
         
-        # Parse severity filter
-        severity_list = []
+        # Parse severity filter - default excludes Info
         if severity:
             severity_list = [s.strip().lower() for s in severity.split(",")]
             filters["severity"] = severity_list
             click.echo(f"Filter: severity = {severity_list}")
         else:
-            click.echo("Filter: severity = ALL")
+            # Default: exclude Info severity (usually noise)
+            severity_list = ["critical", "high", "medium", "low"]
+            filters["severity"] = severity_list
+            click.echo(f"Filter: severity = {severity_list} (default, excludes Info)")
         
         # Parse state filter - default to ACTIVE and RESURFACED (most common states)
         if state:
