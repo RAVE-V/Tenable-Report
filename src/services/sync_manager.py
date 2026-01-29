@@ -212,8 +212,9 @@ class SyncManager:
                 print(f"   Cleared {deleted} existing records")
                 
                 # Bulk insert new data
-                # Using SQLAlchemy Bulk Insert for better performance
-                session.bulk_insert_mappings(Vulnerability, processed_objects)
+                # Using add_all to ensure proper JSON serialization for SQLite
+                new_vulns = [Vulnerability(**data) for data in processed_objects]
+                session.add_all(new_vulns)
                 
                 session.commit()
                 print(f"   ✓ Stored {len(processed_objects)} vulnerabilities")
