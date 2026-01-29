@@ -41,6 +41,76 @@ def init():
         sys.exit(1)
 
 
+@cli.group()
+def classify():
+    """Manage device type classifications (server/workstation/network/unknown)"""
+    pass
+
+
+@classify.command("add")
+@click.argument("os_pattern")
+@click.argument("device_type", type=click.Choice(["server", "workstation", "network", "unknown"]))
+def classify_add(os_pattern, device_type):
+    """Add a custom OS pattern -> device type mapping
+    
+    Example: classify add "my custom os" server
+    """
+    from src.utils.device_detector import DeviceTypeDetector
+    
+    if DeviceTypeDetector.add_override(os_pattern, device_type):
+        click.echo(f"✓ Added: '{os_pattern}' -> {device_type}")
+    else:
+        click.echo(f"✗ Failed to add override", err=True)
+
+
+@classify.command("remove")
+@click.argument("os_pattern")
+def classify_remove(os_pattern):
+    """Remove a custom OS pattern mapping
+    
+    Example: classify remove "my custom os"
+    """
+    from src.utils.device_detector import DeviceTypeDetector
+    
+    if DeviceTypeDetector.remove_override(os_pattern):
+        click.echo(f"✓ Removed: '{os_pattern}'")
+    else:
+        click.echo(f"✗ Pattern not found: '{os_pattern}'", err=True)
+
+
+@classify.command("list")
+def classify_list():
+    """List all custom OS pattern mappings"""
+    from src.utils.device_detector import DeviceTypeDetector
+    
+    overrides = DeviceTypeDetector.list_overrides()
+    
+    if not overrides:
+        click.echo("No custom overrides defined.")
+        click.echo("Use 'classify add <pattern> <type>' to add one.")
+        return
+    
+    click.echo(f"\n📋 Custom Device Type Overrides ({len(overrides)} total)")
+    click.echo("-" * 50)
+    for pattern, device_type in overrides.items():
+        click.echo(f"  '{pattern}' -> {device_type}")
+    click.echo()
+
+
+@classify.command("test")
+@click.argument("os_string")
+def classify_test(os_string):
+    """Test how an OS string would be classified
+    
+    Example: classify test "Windows Server 2022 Datacenter"
+    """
+    from src.utils.device_detector import DeviceTypeDetector
+    
+    device_type = DeviceTypeDetector.detect_device_type(os_string)
+    click.echo(f"'{os_string}' -> {device_type}")
+
+
+
 @cli.command()
 @click.option("--limit", type=int, default=None, help="Limit assets per chunk for testing (e.g., 10 for quick test)")
 @click.option("--days", type=int, default=None, help="Only fetch vulnerabilities from last N days (e.g., 7)")
