@@ -572,12 +572,13 @@
                                 {% for vuln in quick_wins.version_threshold %}
                                 {% set key = vuln.plugin_name %}
                                 {% if key not in grouped_vt %}
-                                {% set _ = grouped_vt.update({key: {'severity': vuln.severity, 'devices': []}}) %}
+                                {% set _ = grouped_vt.update({key: {'severity': vuln.severity, 'devices': [], 'count':
+                                0}}) %}
                                 {% endif %}
                                 {% set _ = grouped_vt[key]['devices'].append(vuln.hostname) %}
+                                {% set _ = grouped_vt[key].update({'count': grouped_vt[key]['devices']|length}) %}
                                 {% endfor %}
-                                {% set sorted_vt = grouped_vt|dictsort(by='value', reverse=true) %}
-                                {% for plugin_name, data in sorted_vt|sort(attribute='1.devices|length', reverse=true)
+                                {% for plugin_name, data in grouped_vt.items()|sort(attribute='1.count', reverse=true)
                                 %}
                                 <div
                                     style="padding: 10px; margin-bottom: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border-left: 3px solid #a78bfa;">
@@ -588,8 +589,8 @@
                                         <div style="display: flex; gap: 8px; align-items: center;">
                                             <span class="badge severity-{{ data.severity|lower }}">{{ data.severity
                                                 }}</span>
-                                            <span class="pill" style="background: #4b5563;">{{ data.devices|length }}
-                                                device{% if data.devices|length > 1 %}s{% endif %}</span>
+                                            <span class="pill" style="background: #4b5563;">{{ data.count }} device{% if
+                                                data.count > 1 %}s{% endif %}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -609,12 +610,14 @@
                                 {% for vuln in quick_wins.unsupported_product %}
                                 {% set key = vuln.plugin_name %}
                                 {% if key not in grouped_up %}
-                                {% set _ = grouped_up.update({key: {'severity': vuln.severity, 'devices': []}}) %}
+                                {% set _ = grouped_up.update({key: {'severity': vuln.severity, 'devices': [], 'count':
+                                0}}) %}
                                 {% endif %}
                                 {% set _ = grouped_up[key]['devices'].append(vuln.hostname) %}
+                                {% set _ = grouped_up[key].update({'count': grouped_up[key]['devices']|length}) %}
                                 {% endfor %}
-                                {% for plugin_name, data in grouped_up.items()|sort(attribute='1.devices|length',
-                                reverse=true) %}
+                                {% for plugin_name, data in grouped_up.items()|sort(attribute='1.count', reverse=true)
+                                %}
                                 <div
                                     style="padding: 10px; margin-bottom: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border-left: 3px solid #ec4899;">
                                     <div
@@ -624,8 +627,8 @@
                                         <div style="display: flex; gap: 8px; align-items: center;">
                                             <span class="badge severity-{{ data.severity|lower }}">{{ data.severity
                                                 }}</span>
-                                            <span class="pill" style="background: #4b5563;">{{ data.devices|length }}
-                                                device{% if data.devices|length > 1 %}s{% endif %}</span>
+                                            <span class="pill" style="background: #4b5563;">{{ data.count }} device{% if
+                                                data.count > 1 %}s{% endif %}</span>
                                         </div>
                                     </div>
                                 </div>
