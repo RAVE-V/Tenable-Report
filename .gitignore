@@ -47,6 +47,7 @@ ENV/
 reports/
 reports_test/
 *.html
+!src/templates/*.html
 *.xlsx
 
 # Testing
