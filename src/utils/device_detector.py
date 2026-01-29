@@ -7,44 +7,45 @@ from typing import Optional
 class DeviceTypeDetector:
     """Detect device type from operating system string"""
     
-    # Server OS patterns (case-insensitive)
-    SERVER_PATTERNS = [
+    # Pre-compiled regex patterns for better performance
+    _SERVER_PATTERNS = [
         # Windows Server
-        r'windows\s+server',
-        r'windows\s+2008',
-        r'windows\s+2012',
-        r'windows\s+2016',
-        r'windows\s+2019',
-        r'windows\s+2022',
-        r'windows\s+2025',
+        re.compile(r'windows\s+server', re.IGNORECASE),
+        re.compile(r'windows\s+2008', re.IGNORECASE),
+        re.compile(r'windows\s+2012', re.IGNORECASE),
+        re.compile(r'windows\s+2016', re.IGNORECASE),
+        re.compile(r'windows\s+2019', re.IGNORECASE),
+        re.compile(r'windows\s+2022', re.IGNORECASE),
+        re.compile(r'windows\s+2025', re.IGNORECASE),
         
         # Linux/Unix Servers
-        r'ubuntu\s+server',
-        r'red\s+hat',
-        r'rhel',
-        r'centos',
-        r'debian',
-        r'fedora\s+server',
-        r'oracle\s+linux',
-        r'suse\s+linux',
-        r'amazon\s+linux',
+        re.compile(r'ubuntu\s+server', re.IGNORECASE),
+        re.compile(r'red\s+hat', re.IGNORECASE),
+        re.compile(r'rhel', re.IGNORECASE),
+        re.compile(r'centos', re.IGNORECASE),
+        re.compile(r'debian', re.IGNORECASE),
+        re.compile(r'fedora\s+server', re.IGNORECASE),
+        re.compile(r'oracle\s+linux', re.IGNORECASE),
+        re.compile(r'suse\s+linux', re.IGNORECASE),
+        re.compile(r'amazon\s+linux', re.IGNORECASE),
         
-        # Generic Server Indicators
-        r'server',  # Generic catch-all (must be last)
+        # Generic Server Indicator (must be last)
+        re.compile(r'server', re.IGNORECASE),
     ]
     
-    # Workstation/Desktop OS patterns
-    WORKSTATION_PATTERNS = [
-        r'windows\s+10',
-        r'windows\s+11',
-        r'windows\s+7',
-        r'windows\s+8',
-        r'windows\s+xp',
-        r'macos',
-        r'mac\s+os',
-        r'ubuntu\s+desktop',
-        r'fedora\s+workstation',
+    _WORKSTATION_PATTERNS = [
+        re.compile(r'windows\s+10', re.IGNORECASE),
+        re.compile(r'windows\s+11', re.IGNORECASE),
+        re.compile(r'windows\s+7', re.IGNORECASE),
+        re.compile(r'windows\s+8', re.IGNORECASE),
+        re.compile(r'windows\s+xp', re.IGNORECASE),
+        re.compile(r'macos', re.IGNORECASE),
+        re.compile(r'mac\s+os', re.IGNORECASE),
+        re.compile(r'ubuntu\s+desktop', re.IGNORECASE),
+        re.compile(r'fedora\s+workstation', re.IGNORECASE),
     ]
+    
+    _NETWORK_KEYWORDS = ['cisco', 'juniper', 'fortinet', 'palo alto', 'router', 'switch', 'firewall']
     
     @staticmethod
     def detect_device_type(operating_system: Optional[str]) -> str:
@@ -60,20 +61,19 @@ class DeviceTypeDetector:
         if not operating_system:
             return 'unknown'
         
-        os_lower = operating_system.lower()
-        
         # Check for servers first (more specific)
-        for pattern in DeviceTypeDetector.SERVER_PATTERNS:
-            if re.search(pattern, os_lower):
+        for pattern in DeviceTypeDetector._SERVER_PATTERNS:
+            if pattern.search(operating_system):
                 return 'server'
         
         # Check for workstations
-        for pattern in DeviceTypeDetector.WORKSTATION_PATTERNS:
-            if re.search(pattern, os_lower):
+        for pattern in DeviceTypeDetector._WORKSTATION_PATTERNS:
+            if pattern.search(operating_system):
                 return 'workstation'
         
         # Check for network devices
-        if any(keyword in os_lower for keyword in ['cisco', 'juniper', 'fortinet', 'palo alto', 'router', 'switch', 'firewall']):
+        os_lower = operating_system.lower()
+        if any(keyword in os_lower for keyword in DeviceTypeDetector._NETWORK_KEYWORDS):
             return 'network'
         
         # Default to unknown
