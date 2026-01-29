@@ -296,6 +296,178 @@ def generate_report(tag, severity, state, format, output, fresh, use_cache):
         sys.exit(1)
 
 
+@cli.command()
+@click.option("--severity", help="Filter by severity (comma-separated: Critical,High,Medium,Low)")
+@click.option("--state", help="Filter by state (comma-separated: ACTIVE,RESURFACED,NEW). Default: ACTIVE only")
+@click.option("--format", type=click.Choice(["xlsx", "html", "both"]), default="xlsx", help="Output format")
+@click.option("--output", type=click.Path(), default="./reports", help="Output directory")
+@click.option("--sort-by", type=click.Choice(["critical", "high", "total", "hostname"]), default="critical", help="Sort servers by")
+@click.option("--min-vulns", type=int, default=0, help="Only show servers with at least N vulnerabilities")
+@click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
+@click.option("--use-cache", is_flag=True, help="Use cached data if available (skip freshness check)")
+def server_report(severity, state, format, output, sort_by, min_vulns, fresh, use_cache):
+    """Generate server-focused vulnerability report"""
+    try:
+        Config.validate()
+        Config.ensure_reports_dir()
+        
+        # Import modules
+        from src.processors.vendor_detector import VendorDetector
+        from src.processors.quick_wins_detector import QuickWinsDetector
+        from src.processors.server_grouper import ServerGrouper
+        from src.cache import VulnCache
+        from src.xlsx_generator import XLSXReportGenerator
+        
+        # Parse filters
+        filters = {}
+        
+        if severity:
+            severity_list = [s.strip().lower() for s in severity.split(",")]
+            filters["severity"] = severity_list
+            click.echo(f"Filter: severity = {severity_list}")
+        
+        # Default to ACTIVE only if no state specified
+        state_list = ["ACTIVE"]
+        if state:
+            state_list = [s.strip().upper() for s in state.split(",")]
+        click.echo(f"Filter: state = {state_list}")
+        
+        # Check cache
+        cache = VulnCache()
+        raw_vulns = None
+        used_cache = False
+        
+        if not fresh:
+            cache_info = cache.get_info(filters)
+            
+            if cache_info:
+                age_hours = cache_info['age_hours']
+                count = cache_info['count']
+                timestamp = cache_info['timestamp']
+                
+                click.echo(f"\n💾 Cached data found:")
+                click.echo(f"   Date: {timestamp}")
+                click.echo(f"   Age: {age_hours:.1f} hours")
+                click.echo(f"   Count: {count} vulnerabilities")
+                
+                if use_cache or (not cache_info['is_stale'] and click.confirm("Use cached data?", default=True)):
+                    cached_data = cache.get(filters)
+                    if cached_data:
+                        raw_vulns = cached_data['vulnerabilities']
+                        used_cache = True
+                        click.echo("✓ Using cached data")
+        
+        # Fetch from API if not using cache
+        if raw_vulns is None:
+            click.echo("Fetching vulnerabilities from Tenable...")
+            client = TenableExporter()
+            raw_vulns = client.export_vulnerabilities(filters)
+            
+            # Cache the data
+            click.echo("💾 Caching vulnerability data for future use...")
+            cache.set(filters, raw_vulns)
+        
+        if not raw_vulns:
+            click.echo("✗ No vulnerabilities found matching filters")
+            sys.exit(0)
+        
+        click.echo(f"✓ {'Using' if used_cache else 'Fetched'} {len(raw_vulns)} vulnerabilities")
+        
+        # Normalize data
+        click.echo("Normalizing vulnerability data...")
+        vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
+        
+        # Filter by state
+        original_count = len(vulns)
+        vulns = [v for v in vulns if v.get('state', 'ACTIVE').upper() in state_list]
+        if len(vulns) < original_count:
+            filtered_count = original_count - len(vulns)
+            click.echo(f"✓ Filtered {filtered_count} vulnerabilities (keeping only: {', '.join(state_list)})")
+        
+        if not vulns:
+            click.echo(f"✗ No vulnerabilities found with state: {', '.join(state_list)}")
+            click.echo(f"  Tip: Try --state ACTIVE,RESURFACED,NEW or use --fresh to re-download data")
+            sys.exit(0)
+        
+        # Vendor Detection
+        click.echo("Detecting vendors and products...")
+        detector = VendorDetector()
+        vulns = detector.enrich_vulnerabilities(vulns)
+        
+        # Quick Wins Detection
+        click.echo("Detecting quick wins...")
+        quick_wins_detector = QuickWinsDetector()
+        quick_wins_detector.detect_quick_wins(vulns)
+        
+        # Group by Server
+        click.echo(f"Grouping by server (sort by: {sort_by})...")
+        server_grouper = ServerGrouper()
+        servers = server_grouper.group_by_server(vulns)
+        
+        # Filter by minimum vulnerabilities
+        if min_vulns > 0:
+            servers = {k: v for k, v in servers.items() if v["total_vulns"] >= min_vulns}
+            click.echo(f"✓ Filtered to servers with >= {min_vulns} vulnerabilities")
+        
+        # Sort servers
+        sorted_servers = server_grouper.sort_servers(servers, sort_by=sort_by)
+        
+        # Get statistics
+        stats = server_grouper.get_server_stats(servers)
+        
+        click.echo(f"\n📊 Server Report Summary:")
+        click.echo(f"   Total Servers: {stats['total_servers']}")
+        click.echo(f"   Total Vulnerabilities: {stats['total_vulns']}")
+        click.echo(f"   Critical: {stats['severity_totals']['critical']}")
+        click.echo(f"   High: {stats['severity_totals']['high']}")
+        click.echo(f"   Quick Wins: {stats['total_quick_wins']}")
+        
+        # Generate reports
+        output_dir = Path(output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Metadata
+        metadata = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "total_servers": stats['total_servers'],
+            "total_vulns": stats['total_vulns'],
+            "filters": filters,
+            "sort_by": sort_by
+        }
+        
+        if format in ["xlsx", "both"]:
+            xlsx_path = output_dir / f"Server_Report_{timestamp}.xlsx"
+            click.echo(f"\nGenerating Excel report...")
+            
+            xlsx_gen = XLSXReportGenerator()
+            xlsx_gen.generate_server_report(
+                output_path=xlsx_path,
+                servers=sorted_servers,
+                stats=stats,
+                metadata=metadata
+            )
+            
+            click.echo(f"✓ Excel report generated: {xlsx_path}")
+        
+        if format in ["html", "both"]:
+            # HTML server report would go here
+            click.echo(f"\n⚠️  HTML format for server reports coming soon!")
+            click.echo(f"   Use --format xlsx for now")
+        
+        click.echo(f"\n✓ Server report generation complete!")
+    
+    except TenableAPIError as e:
+        click.echo(f"✗ Tenable API error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        logger.exception("server-report failed")
+        sys.exit(1)
+
+
+
 
 @cli.command()
 def list_tags():
