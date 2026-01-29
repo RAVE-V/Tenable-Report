@@ -92,17 +92,24 @@ class TenableExporter:
         # Step 2: Poll for job completion
         status = self._poll_export_status(export_uuid)
         
+        # Log full status for debugging
+        logger.debug(f"Export status response: {status}")
+        
         # Handle chunks_available - it might be a list or an integer
         chunks_available = status["chunks_available"]
         if isinstance(chunks_available, list):
-            chunks_count = chunks_available[0] if chunks_available else 0
+            # If it's a list, it might contain chunk IDs rather than a count
+            logger.info(f"chunks_available is a list: {chunks_available}")
+            chunks_count = len(chunks_available) if chunks_available else 0
+            chunk_ids = chunks_available
         else:
             chunks_count = chunks_available
+            chunk_ids = list(range(chunks_available))
         
-        logger.info(f"Export job completed. Chunks available: {chunks_count}")
+        logger.info(f"Export job completed. Chunks available: {chunks_count}, Chunk IDs: {chunk_ids}")
         
         # Step 3: Download chunks in parallel
-        vulnerabilities = self._download_chunks(export_uuid, chunks_count)
+        vulnerabilities = self._download_chunks(export_uuid, chunk_ids)
         logger.info(f"Downloaded {len(vulnerabilities)} vulnerabilities")
         
         return vulnerabilities
@@ -189,13 +196,13 @@ class TenableExporter:
         raise TimeoutError(f"Export job {export_uuid} did not complete in {max_wait}s")
     
     @measure_performance
-    def _download_chunks(self, export_uuid: str, chunks_available: int) -> List[Dict]:
+    def _download_chunks(self, export_uuid: str, chunk_ids: List[int]) -> List[Dict]:
         """
         Download all export chunks in parallel
         
         Args:
             export_uuid: Export job UUID
-            chunks_available: Number of chunks to download
+            chunk_ids: List of chunk IDs to download
         
         Returns:
             Merged list of vulnerabilities from all chunks
@@ -204,27 +211,38 @@ class TenableExporter:
         
         def download_chunk(chunk_id: int) -> List[Dict]:
             """Download a single chunk"""
+            url = f"{self.base_url}/vulns/export/{export_uuid}/chunks/{chunk_id}"
+            logger.debug(f"Downloading chunk {chunk_id} from: {url}")
+            
             try:
                 response = self.session.get(
-                    f"{self.base_url}/vulns/export/{export_uuid}/chunks/{chunk_id}",
+                    url,
                     headers=self.headers,
                     timeout=Config.EXPORT_TIMEOUT
                 )
+                
+                # Log response details before raising for status
+                if response.status_code != 200:
+                    logger.error(f"Chunk {chunk_id} request failed: {response.status_code} - {response.text[:500]}")
+                
                 response.raise_for_status()
                 
                 chunk_data = response.json()
-                logger.debug(f"Downloaded chunk {chunk_id}: {len(chunk_data)} vulnerabilities")
+                logger.info(f"Downloaded chunk {chunk_id}: {len(chunk_data)} vulnerabilities")
                 return chunk_data
             
             except requests.exceptions.RequestException as e:
-                logger.error(f"Failed to download chunk {chunk_id}: {e}")
-                raise TenableAPIError(f"Chunk download failed: {e}")
+                logger.error(f"Failed to download chunk {chunk_id} from {url}: {e}")
+                if hasattr(e, 'response') and e.response is not None:
+                    logger.error(f"Response status: {e.response.status_code}, Body: {e.response.text[:500]}")
+                raise TenableAPIError(f"Chunk download failed for chunk {chunk_id}: {e}")
         
         # Download chunks in parallel
+        logger.info(f"Starting download of {len(chunk_ids)} chunks: {chunk_ids}")
         with ThreadPoolExecutor(max_workers=Config.EXPORT_MAX_CONCURRENT_CHUNKS) as executor:
             future_to_chunk = {
                 executor.submit(download_chunk, chunk_id): chunk_id 
-                for chunk_id in range(chunks_available)
+                for chunk_id in chunk_ids
             }
             
             for future in as_completed(future_to_chunk):
