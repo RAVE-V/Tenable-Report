@@ -671,9 +671,10 @@
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <span><strong>🖥️ {{ hostname }}</strong></span>
                                     <span class="pill" style="background: #1e3a5f; color: #93c5fd; font-size: 10px;">{{
-                                        s_stat.ipv4 }}</span>
+                                        s_stat.ipv4|default('N/A') }}</span>
                                     <span class="pill" style="background: #1e293b; color: #94a3b8; font-size: 10px;">{{
-                                        s_stat.os[:40] }}{% if s_stat.os|length > 40 %}...{% endif %}</span>
+                                        (s_stat.os|default('Unknown'))[:40] }}{% if (s_stat.os|default(''))|length > 40
+                                        %}...{% endif %}</span>
                                 </div>
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                     {% if s_stat.critical > 0 %}<span class="badge sev-critical">{{ s_stat.critical }}
