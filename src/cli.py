@@ -256,7 +256,9 @@ def sync_all(fresh):
         for v in vulns:
             os_val = v.get('operating_system')
             device_type = detector.detect_device_type(os_val)
-            vendor, product = vendor_detector.detect(v.get('plugin_name', ''))
+            vendor_result = vendor_detector.detect(v)
+            vendor = vendor_result.vendor if vendor_result else 'Other'
+            product = vendor_result.product_family if vendor_result else None
             
             processed.append({
                 'asset_uuid': v.get('asset_uuid'),
