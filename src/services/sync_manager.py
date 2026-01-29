@@ -169,9 +169,16 @@ class SyncManager:
                 # Get usage of raw data
                 raw_v = raw_vulns[i] if raw_vulns and i < len(raw_vulns) else {}
 
-                # Ensure date fields are datetime objects or None
+                # Ensure key fields are strings (Tenable can return lists)
+                def to_string(value):
+                    if isinstance(value, list):
+                        return ", ".join(str(val) for val in value if val)
+                    return value
+
+                os_val = to_string(v.get('operating_system'))
+                hostname_val = to_string(v.get('hostname'))
+                ipv4_val = to_string(v.get('ipv4'))
                 
-                os_val = v.get('operating_system')
                 device_type = detector.detect_device_type(os_val)
                 vendor_result = vendor_detector.detect(v)
                 vendor = vendor_result.vendor if vendor_result else 'Other'
@@ -183,8 +190,8 @@ class SyncManager:
                 
                 processed_objects.append({
                     'asset_uuid': v.get('asset_uuid'),
-                    'hostname': v.get('hostname'),
-                    'ipv4': v.get('ipv4'),
+                    'hostname': hostname_val,
+                    'ipv4': ipv4_val,
                     'operating_system': os_val[:255] if os_val else None,
                     'device_type': device_type,
                     'plugin_id': v.get('plugin_id'),
