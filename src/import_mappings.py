@@ -6,7 +6,7 @@ from typing import Dict, List
 import click
 
 from src.database.models import Server, Application, ServerApplicationMap, ConfidenceLevel
-from src.database.connection import get_db_session
+from src.database.session import get_db_session
 
 
 class MappingImporter:
