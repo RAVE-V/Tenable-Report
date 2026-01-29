@@ -507,88 +507,130 @@
         <!-- Quick Wins Detail Section -->
         {% if quick_wins and quick_wins.total_quick_wins > 0 %}
         <section id="quick-wins-detail" style="margin-bottom: 30px;">
-            <h2>✨ Quick Wins Details</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
-                {% if quick_wins.version_threshold %}
-                <div class="card">
-                    <h3 style="color: #d8b4fe; margin-bottom: 10px; font-size: 1.2em;">Version Threshold ({{
-                        quick_wins.version_threshold|length }})</h3>
-                    <div style="max-height: 300px; overflow-y: auto;">
-                        {% for vuln in quick_wins.version_threshold %}
-                        <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <div style="font-weight: 600;">{{ vuln.plugin_name }}</div>
-                            <div style="font-size: 0.9em; color: var(--muted);">Host: {{ vuln.hostname }}</div>
+            <details open>
+                <summary style="font-size: 1.2em;">
+                    <span>✨ Quick Wins Details ({{ quick_wins.total_quick_wins }} items)</span>
+                </summary>
+                <div class="content" style="padding: 15px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 15px;">
+                        {% if quick_wins.version_threshold %}
+                        <div class="card">
+                            <h3 style="color: #d8b4fe; margin-bottom: 10px; font-size: 1.2em;">Version Threshold</h3>
+                            <div style="max-height: 400px; overflow-y: auto;">
+                                {% set grouped_vt = {} %}
+                                {% for vuln in quick_wins.version_threshold %}
+                                {% set key = vuln.plugin_name %}
+                                {% if key not in grouped_vt %}
+                                {% set _ = grouped_vt.update({key: {'severity': vuln.severity, 'devices': []}}) %}
+                                {% endif %}
+                                {% set _ = grouped_vt[key]['devices'].append(vuln.hostname) %}
+                                {% endfor %}
+                                {% for plugin_name, data in grouped_vt.items() %}
+                                <div
+                                    style="padding: 10px; margin-bottom: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border-left: 3px solid #a78bfa;">
+                                    <div
+                                        style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                        <span style="font-weight: 600; flex: 1;">{{ plugin_name }}</span>
+                                        <span class="badge severity-{{ data.severity|lower }}">{{ data.severity
+                                            }}</span>
+                                        <span class="pill" style="background: #4b5563;">{{ data.devices|length }}
+                                            device{% if data.devices|length > 1 %}s{% endif %}</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
+                        {% endif %}
 
-                {% if quick_wins.unsupported_product %}
-                <div class="card">
-                    <h3 style="color: #f9a8d4; margin-bottom: 10px; font-size: 1.2em;">Unsupported Products ({{
-                        quick_wins.unsupported_product|length }})</h3>
-                    <div style="max-height: 300px; overflow-y: auto;">
-                        {% for vuln in quick_wins.unsupported_product %}
-                        <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <div style="font-weight: 600;">{{ vuln.plugin_name }}</div>
-                            <div style="font-size: 0.9em; color: var(--muted);">Host: {{ vuln.hostname }}</div>
+                        {% if quick_wins.unsupported_product %}
+                        <div class="card">
+                            <h3 style="color: #f9a8d4; margin-bottom: 10px; font-size: 1.2em;">Unsupported Products</h3>
+                            <div style="max-height: 400px; overflow-y: auto;">
+                                {% set grouped_up = {} %}
+                                {% for vuln in quick_wins.unsupported_product %}
+                                {% set key = vuln.plugin_name %}
+                                {% if key not in grouped_up %}
+                                {% set _ = grouped_up.update({key: {'severity': vuln.severity, 'devices': []}}) %}
+                                {% endif %}
+                                {% set _ = grouped_up[key]['devices'].append(vuln.hostname) %}
+                                {% endfor %}
+                                {% for plugin_name, data in grouped_up.items() %}
+                                <div
+                                    style="padding: 10px; margin-bottom: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border-left: 3px solid #ec4899;">
+                                    <div
+                                        style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                        <span style="font-weight: 600; flex: 1;">{{ plugin_name }}</span>
+                                        <span class="badge severity-{{ data.severity|lower }}">{{ data.severity
+                                            }}</span>
+                                        <span class="pill" style="background: #4b5563;">{{ data.devices|length }}
+                                            device{% if data.devices|length > 1 %}s{% endif %}</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
-                        {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
-                {% endif %}
-            </div>
+            </details>
             <a href="#" class="back-to-top">Back to top ↑</a>
         </section>
         {% endif %}
 
         {% if exploitable_vulns %}
         <section id="exploitable" style="margin-bottom: 30px;">
-            <h2 style="color: #ef4444; border-bottom-color: #ef4444;">🔥 Exploitable Vulnerabilities ({{
-                exploitable_vulns|length }})</h2>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Severity</th>
-                            <th>VPR</th>
-                            <th>Vulnerability</th>
-                            <th>Asset</th>
-                            <th>State</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for vuln in exploitable_vulns|sort(attribute='vpr_score', reverse=True) %}
-                        {% set vpr = vuln.vpr_score|default(0.0)|float %}
-                        <tr
-                            style="{% if vpr >= 9.0 %}background: rgba(239, 68, 68, 0.15); border-left: 3px solid #ef4444;{% endif %}">
-                            <td><span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity }}</span></td>
-                            <td>
-                                {% if vuln.vpr_score %}
-                                <span class="badge"
-                                    style="background: {% if vpr >= 9 %}#7f1d1d{% elif vpr >= 7 %}#c2410c{% else %}#374151{% endif %};">
-                                    {{ vuln.vpr_score }}
-                                </span>
-                                {% else %}
-                                <span class="pill">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div style="font-weight: 600;">{{ vuln.plugin_name }}</div>
-                                <div style="font-size: 0.9em; color: var(--muted);">Plugin ID: {{ vuln.plugin_id }}
-                                </div>
-                            </td>
-                            <td>
-                                <div>{{ vuln.hostname }}</div>
-                                <div style="font-size: 0.9em; color: var(--muted);">{{ vuln.ipv4 }}</div>
-                            </td>
-                            <td><span class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <details>
+                <summary style="font-size: 1.2em;">
+                    <span style="color: #ef4444;">🔥 Exploitable Vulnerabilities ({{ exploitable_vulns|length }})</span>
+                </summary>
+                <div class="content" style="padding: 15px;">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Severity</th>
+                                    <th>VPR</th>
+                                    <th>Vulnerability</th>
+                                    <th>Asset</th>
+                                    <th>State</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vuln in exploitable_vulns|sort(attribute='vpr_score', reverse=True) %}
+                                {% set vpr = vuln.vpr_score|default(0.0)|float %}
+                                <tr
+                                    style="{% if vpr >= 9.0 %}background: rgba(239, 68, 68, 0.15); border-left: 3px solid #ef4444;{% endif %}">
+                                    <td><span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity
+                                            }}</span></td>
+                                    <td>
+                                        {% if vuln.vpr_score %}
+                                        <span class="badge"
+                                            style="background: {% if vpr >= 9 %}#7f1d1d{% elif vpr >= 7 %}#c2410c{% else %}#374151{% endif %};">
+                                            {{ vuln.vpr_score }}
+                                        </span>
+                                        {% else %}
+                                        <span class="pill">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div style="font-weight: 600;">{{ vuln.plugin_name }}</div>
+                                        <div style="font-size: 0.9em; color: var(--muted);">Plugin ID: {{ vuln.plugin_id
+                                            }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>{{ vuln.hostname }}</div>
+                                        <div style="font-size: 0.9em; color: var(--muted);">{{ vuln.ipv4 }}</div>
+                                    </td>
+                                    <td><span class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </details>
             <a href="#" class="back-to-top">Back to top ↑</a>
         </section>
         {% endif %}
@@ -626,10 +668,12 @@
                         <summary style="background: rgba(59, 130, 246, 0.1);">
                             <div
                                 style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                                <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
                                     <span><strong>🖥️ {{ hostname }}</strong></span>
-                                    <span style="font-size: 0.9em; color: var(--muted);">({{ s_stat.ipv4 }} | {{
-                                        s_stat.os }})</span>
+                                    <span class="pill" style="background: #1e3a5f; color: #93c5fd; font-size: 10px;">{{
+                                        s_stat.ipv4 }}</span>
+                                    <span class="pill" style="background: #1e293b; color: #94a3b8; font-size: 10px;">{{
+                                        s_stat.os[:40] }}{% if s_stat.os|length > 40 %}...{% endif %}</span>
                                 </div>
                                 <div style="display: flex; gap: 8px; align-items: center;">
                                     {% if s_stat.critical > 0 %}<span class="badge sev-critical">{{ s_stat.critical }}
