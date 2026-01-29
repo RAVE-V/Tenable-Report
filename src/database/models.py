@@ -1,6 +1,7 @@
 """SQLAlchemy ORM models for Tenable Report Generator"""
 
 import uuid
+import json
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, UniqueConstraint, Enum, Text, JSON
 from sqlalchemy.ext.declarative import declarative_base
@@ -121,7 +122,7 @@ class ReportRun(Base):
     
     run_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
-    filters_json = Column(JSON)  # Store filter criteria as JSON
+    filters_json = Column(Text)  # Store filter criteria as JSON string (was JSON)
     export_job_uuid = Column(String(255))
     total_vulns = Column(Integer)
     total_assets = Column(Integer)
@@ -154,7 +155,7 @@ class Vulnerability(Base):
     state = Column(String(20), index=True)  # ACTIVE, RESURFACED, NEW, FIXED
     
     # CVE and scoring
-    cve = Column(JSON)  # List of CVEs
+    cve = Column(Text)  # List of CVEs (Stored as JSON string)
     vpr_score = Column(Float)
     cvss_score = Column(Float)
     exploit_available = Column(Boolean, default=False)
@@ -173,7 +174,7 @@ class Vulnerability(Base):
     synced_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Store full raw data for reference
-    raw_data = Column(JSON)
+    raw_data = Column(Text)  # Stored as JSON string
     
     # Unique constraint: one entry per asset + plugin combination
     __table_args__ = (
@@ -185,6 +186,17 @@ class Vulnerability(Base):
     
     def to_dict(self) -> dict:
         """Convert to dictionary for report generation"""
+        # Deserialize JSON fields
+        cve_list = []
+        if self.cve:
+            try:
+                cve_list = json.loads(self.cve)
+            except json.JSONDecodeError:
+                cve_list = []
+        
+        # Deserialize raw_data if needed (not usually needed for report summary, skipping for performance unless requested)
+        # If any report template uses raw_data, we should deserialize it. Currently templates use specific fields.
+        
         return {
             'asset_uuid': self.asset_uuid,
             'hostname': self.hostname,
@@ -195,7 +207,7 @@ class Vulnerability(Base):
             'plugin_name': self.plugin_name,
             'severity': self.severity,
             'state': self.state,
-            'cve': self.cve or [],
+            'cve': cve_list,
             'vpr_score': self.vpr_score,
             'cvss_score': self.cvss_score,
             'exploit_available': self.exploit_available,

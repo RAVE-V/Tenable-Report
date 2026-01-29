@@ -3,6 +3,7 @@
 import time
 import logging
 import sys
+import json
 from datetime import datetime, timedelta, timezone
 from collections import Counter
 from typing import Dict, List, Optional
@@ -168,13 +169,17 @@ class SyncManager:
                 # Get usage of raw data
                 raw_v = raw_vulns[i] if raw_vulns and i < len(raw_vulns) else {}
 
-                # Ensure date fields are datetime objects or None (Handled by Normalizer fix now)
+                # Ensure date fields are datetime objects or None
                 
                 os_val = v.get('operating_system')
                 device_type = detector.detect_device_type(os_val)
                 vendor_result = vendor_detector.detect(v)
                 vendor = vendor_result.vendor if vendor_result else 'Other'
                 product = vendor_result.product_family if vendor_result else None
+                
+                cve_val = v.get('cve', [])
+                if not isinstance(cve_val, list):
+                    cve_val = []
                 
                 processed_objects.append({
                     'asset_uuid': v.get('asset_uuid'),
@@ -186,7 +191,7 @@ class SyncManager:
                     'plugin_name': v.get('plugin_name', '')[:500] if v.get('plugin_name') else None,
                     'severity': v.get('severity'),
                     'state': v.get('state'),
-                    'cve': v.get('cve') if isinstance(v.get('cve'), list) else [],
+                    'cve': json.dumps(cve_val), # Serialize list to JSON string for SQLite Text column
                     'vpr_score': v.get('vpr_score'),
                     'cvss_score': v.get('cvss_score'),
                     'exploit_available': v.get('exploit_available', False),
@@ -196,7 +201,8 @@ class SyncManager:
                     'description': v.get('description', '')[:2000] if v.get('description') else None,
                     'first_found': v.get('first_found'),
                     'last_found': v.get('last_found'),
-                    'raw_data': raw_v, # Use original raw data (JSON serializable) instead of normalized dict with datetimes
+                    # Serialize raw_data to string (with default=str for datetime/unsafe objects)
+                    'raw_data': json.dumps(raw_v, default=str), 
                 })
             
             # Count device types
@@ -212,7 +218,7 @@ class SyncManager:
                 print(f"   Cleared {deleted} existing records")
                 
                 # Bulk insert new data
-                # Using add_all to ensure proper JSON serialization for SQLite
+                # Using add_all to ensure proper serialization and ORM hooks
                 new_vulns = [Vulnerability(**data) for data in processed_objects]
                 session.add_all(new_vulns)
                 
