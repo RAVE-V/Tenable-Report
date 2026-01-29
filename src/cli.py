@@ -129,8 +129,8 @@ def sync_db(limit, days):
 
 @cli.command()
 @click.option("--tag", help="Filter by tag (format: Category:Value)")
-@click.option("--severity", help="Filter by severity (comma-separated: Critical,High,Medium,Low)")
-@click.option("--state", help="Filter by state (comma-separated: ACTIVE,RESURFACED,NEW). Default: ACTIVE only")
+@click.option("--severity", help="Filter by severity (comma-separated: Critical,High,Medium,Low). Default: ALL")
+@click.option("--state", help="Filter by state (comma-separated: ACTIVE,RESURFACED,NEW). Default: ALL")
 @click.option("--format", type=click.Choice(["xlsx", "html", "both"]), default="xlsx", help="Output format")
 @click.option("--output", type=click.Path(), default="./reports", help="Output directory")
 @click.option("--servers-only/--all-devices", default=True, help="Only include servers (default) or all devices")
@@ -166,11 +166,13 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
             filters["severity"] = severity_list
             click.echo(f"Filter: severity = {severity_list}")
         
-        # Default to ACTIVE only if no state specified
-        state_list = ["ACTIVE"]
+        # Default to ALL states if not specified (Tenable API state field is unreliable)
         if state:
             state_list = [s.strip().upper() for s in state.split(",")]
-        click.echo(f"Filter: state = {state_list}")
+            click.echo(f"Filter: state = {state_list}")
+        else:
+            state_list = None  # Don't filter by state
+            click.echo("Filter: state = ALL (no filtering)")
         
         # Check cache
         cache = VulnCache()
@@ -228,18 +230,24 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
                 click.echo(f"✓ Filtered {filtered_count} non-server devices (servers only)")
                 click.echo(f"  Tip: Use --all-devices to include workstations and other devices")
         
-        # Filter by state (default: ACTIVE only)
-        # Note: If state field is missing, treat as ACTIVE
-        original_count = len(vulns)
-        vulns = [v for v in vulns if v.get('state', 'ACTIVE').upper() in state_list]
-        if len(vulns) < original_count:
-            filtered_count = original_count - len(vulns)
-            click.echo(f"✓ Filtered {filtered_count} vulnerabilities (keeping only: {', '.join(state_list)})")
-            click.echo(f"  Tip: Use --state ACTIVE,RESURFACED,NEW to include all states")
+        
+        # Filter by state (ONLY if user explicitly specified states)
+        if state_list is not None:
+            original_count = len(vulns)
+            # Filter, treating missing state as valid (keep it)
+            vulns = [v for v in vulns if not v.get('state') or str(v.get('state')).upper() in state_list]
+            if len(vulns) < original_count:
+                filtered_count = original_count - len(vulns)
+                click.echo(f"✓ Filtered {filtered_count} vulnerabilities (keeping only: {', '.join(state_list)})")
+        else:
+            click.echo("✓ Keeping all vulnerabilities (no state filtering)")
         
         if not vulns:
-            click.echo(f"✗ No vulnerabilities found with state: {', '.join(state_list)}")
-            click.echo(f"  Tip: Try --state ACTIVE,RESURFACED,NEW or use --fresh to re-download data")
+            click.echo(f"✗ No vulnerabilities found matching filters")
+            if servers_only:
+                click.echo(f"  Tip: Try --all-devices to include workstations")
+            if state_list:
+                click.echo(f"  Tip: Remove --state filter or use different state values")
             sys.exit(0)
         
         # Vendor Detection
