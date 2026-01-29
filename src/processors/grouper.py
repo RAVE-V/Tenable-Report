@@ -105,32 +105,33 @@ class VulnerabilityGrouper:
     
     def get_vendor_statistics(self, grouped_vulns: Dict[str, Dict[str, List[Dict]]]) -> Dict[str, Dict]:
         """
-        Get statistics for each vendor
+        Get statistics for each vendor including affected assets and product breakdown
         
         Args:
             grouped_vulns: Grouped vulnerabilities
         
         Returns:
-            Dictionary with vendor statistics:
-            {
-                "Microsoft": {
-                    "total_vulns": 10,
-                    "critical": 3,
-                    "high": 5,
-                    "medium": 2,
-                    "low": 0,
-                    "products": ["Windows Server", "SQL Server"]
-                },
-                ...
-            }
+            Dictionary with vendor statistics
         """
         stats = {}
         
         for vendor, products in grouped_vulns.items():
-            # Flatten vulnerabilities
+            # Flatten vulnerabilities and track assets
             all_vulns = []
-            for product_vulns in products.values():
+            vendor_assets = set()
+            product_stats = {}
+            
+            for product, product_vulns in products.items():
                 all_vulns.extend(product_vulns)
+                
+                # Product level stats
+                prod_assets = set(v.get("asset_uuid") for v in product_vulns if v.get("asset_uuid"))
+                vendor_assets.update(prod_assets)
+                
+                product_stats[product] = {
+                    "total_vulns": len(product_vulns),
+                    "affected_assets": len(prod_assets)
+                }
             
             # Count by severity
             severity_counts = {
@@ -142,10 +143,12 @@ class VulnerabilityGrouper:
             
             stats[vendor] = {
                 "total_vulns": len(all_vulns),
+                "affected_assets": len(vendor_assets),
                 "critical": severity_counts["critical"],
                 "high": severity_counts["high"],
                 "medium": severity_counts["medium"],
                 "low": severity_counts["low"],
+                "prod_stats": product_stats,
                 "products": [p for p in products.keys() if p is not None]
             }
         

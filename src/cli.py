@@ -2,6 +2,7 @@
 
 import click
 import logging
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -161,20 +162,22 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
                 click.echo("✗ Invalid tag format. Use Category:Value", err=True)
                 sys.exit(1)
         
-        # TESTING: Severity filtering disabled
-        # if severity:
-        #     severity_list = [s.strip().lower() for s in severity.split(",")]
-        #     filters["severity"] = severity_list
-        #     click.echo(f"Filter: severity = {severity_list}")
-        click.echo("Filter: severity = ALL (disabled for testing)")
+        # Parse severity filter
+        severity_list = []
+        if severity:
+            severity_list = [s.strip().lower() for s in severity.split(",")]
+            filters["severity"] = severity_list
+            click.echo(f"Filter: severity = {severity_list}")
+        else:
+            click.echo("Filter: severity = ALL")
         
-        # Default to ALL states if not specified (Tenable API state field is unreliable)
+        # Parse state filter - default to ACTIVE, RESURFACED, NEW
         if state:
             state_list = [s.strip().upper() for s in state.split(",")]
             click.echo(f"Filter: state = {state_list}")
         else:
-            state_list = None  # Don't filter by state
-            click.echo("Filter: state = ALL (no filtering)")
+            state_list = ["ACTIVE", "RESURFACED", "NEW"]  # Default includes all active vulnerabilities
+            click.echo(f"Filter: state = {state_list} (default)")
         
         # Check cache
         cache = VulnCache()
@@ -215,11 +218,7 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
             click.echo("✗ No vulnerabilities found matching filters")
             sys.exit(0)
             
-        # Debug: Save first few raw records to a file for the user to inspect
-        import json
-        with open("debug_raw_data.json", "w") as f:
-            json.dump(raw_vulns[:5], f, indent=2)
-        click.echo("🔍 Saved first 5 raw records to debug_raw_data.json for inspection")
+
         
         click.echo(f"✓ {'Using' if used_cache else 'Fetched'} {len(raw_vulns)} vulnerabilities")
         
@@ -239,8 +238,13 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
                 click.echo("  Tip: Use --all-devices to include workstations and other devices")
         
         
-        # TESTING: State filtering completely disabled
-        click.echo("✓ State filtering disabled for testing - keeping ALL vulnerabilities")
+        # Apply state filtering on normalized data
+        if state_list:
+            original_count = len(vulns)
+            vulns = [v for v in vulns if v.get('state', '').upper() in state_list]
+            filtered_count = original_count - len(vulns)
+            if filtered_count > 0:
+                click.echo(f"✓ Filtered {filtered_count} vulnerabilities by state (keeping {state_list})")
         
         if not vulns:
             click.echo("✗ No vulnerabilities found matching filters")
@@ -265,6 +269,81 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
         click.echo("Grouping by vendor and product...")
         grouper = VulnerabilityGrouper()
         sorted_vendors, vendor_stats = grouper.group_and_sort(vulns)
+        
+        # Identify exploitable vulnerabilities
+        exploitable_vulns = [v for v in vulns if v.get("exploit_available")]
+        click.echo(f"  Found {len(exploitable_vulns)} exploitable vulnerabilities")
+        
+        # Enrich with Application Mappings
+        click.echo("Enriching with application data...")
+        from src.database.session import get_db_session
+        from src.database.models import Server, Application, ServerApplicationMap
+        
+        hostname_to_app = {}
+        try:
+            with get_db_session() as session:
+                query = session.query(Server.hostname, Application.app_name)\
+                    .join(ServerApplicationMap, Server.server_id == ServerApplicationMap.server_id)\
+                    .join(Application, Application.app_id == ServerApplicationMap.app_id)
+                hostname_to_app = {h: a for h, a in query.all()}
+                click.echo(f"  Loaded {len(hostname_to_app)} server-application mappings")
+        except Exception as e:
+            click.echo(f"⚠ Warning: Could not fetch application mappings: {e}")
+            
+        # Enrich vulns and build App grouping
+        from collections import defaultdict
+        grouped_by_app = defaultdict(lambda: defaultdict(list))
+        
+        for v in vulns:
+            hostname = v.get("hostname", "Unknown")
+            app_name = hostname_to_app.get(hostname, "Unassigned")
+            v["application"] = app_name
+            grouped_by_app[app_name][hostname].append(v)
+            
+        # Sort apps by name (Unassigned last)
+        sorted_apps = sorted(grouped_by_app.items(), key=lambda x: (x[0] == "Unassigned", x[0]))
+
+        # Calculate Application Stats
+        app_stats = {}
+        server_stats = {}  # New: hostname -> {os, ipv4, critical, high, medium, low, total}
+        
+        for app_name, servers in grouped_by_app.items():
+            stats = {
+                "server_count": len(servers),
+                "critical": 0,
+                "high": 0,
+                "medium": 0,
+                "low": 0,
+                "total": 0
+            }
+            for hostname, host_vulns in servers.items():
+                # Get host info from first vuln (assuming consistent per host)
+                first_vuln = host_vulns[0] if host_vulns else {}
+                h_stats = {
+                    "os": first_vuln.get("operating_system") or "Unknown OS",
+                    "ipv4": first_vuln.get("ipv4") or "N/A",
+                    "critical": 0,
+                    "high": 0,
+                    "medium": 0,
+                    "low": 0,
+                    "total": 0
+                }
+                
+                for v in host_vulns:
+                    # Update App Stats
+                    stats["total"] += 1
+                    sev = v.get("severity", "").lower()
+                    if sev in stats:
+                        stats[sev] += 1
+                    
+                    # Update Server Stats
+                    h_stats["total"] += 1
+                    if sev in h_stats:
+                        h_stats[sev] += 1
+                
+                server_stats[hostname] = h_stats
+                
+            app_stats[app_name] = stats
         
         # Generate reports
         output_dir = Path(output)
@@ -300,7 +379,11 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
                 grouped_vulns=sorted_vendors,
                 vendor_stats=vendor_stats,
                 quick_wins=quick_wins,
-                metadata=metadata
+                metadata=metadata,
+                exploitable_vulns=exploitable_vulns,
+                grouped_by_app=sorted_apps,
+                app_stats=app_stats,
+                server_stats=server_stats
             )
             
             click.echo(f"✓ HTML report saved: {html_path}")
@@ -342,10 +425,21 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
         # Parse filters
         filters = {}
         
-        # TESTING: Severity/State filtering disabled
-        click.echo("Filter: severity = ALL (disabled for testing)")
-        click.echo("Filter: state = ALL (disabled for testing)")
-        state_list = None
+        # Parse severity filter
+        if severity:
+            severity_list = [s.strip().lower() for s in severity.split(",")]
+            filters["severity"] = severity_list
+            click.echo(f"Filter: severity = {severity_list}")
+        else:
+            click.echo("Filter: severity = ALL")
+        
+        # Parse state filter - default to ACTIVE, RESURFACED, NEW
+        if state:
+            state_list = [s.strip().upper() for s in state.split(",")]
+            click.echo(f"Filter: state = {state_list}")
+        else:
+            state_list = ["ACTIVE", "RESURFACED", "NEW"]  # Default includes all active vulnerabilities
+            click.echo(f"Filter: state = {state_list} (default)")
         
         # Check cache
         cache = VulnCache()
@@ -402,8 +496,13 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
             if filtered_count > 0:
                 click.echo(f"✓ Filtered {filtered_count} non-server devices (servers only)")
         
-        # TESTING: State filtering completely disabled
-        click.echo("✓ State filtering disabled for testing - keeping ALL vulnerabilities")
+        # Apply state filtering on normalized data
+        if state_list:
+            original_count = len(vulns)
+            vulns = [v for v in vulns if v.get('state', '').upper() in state_list]
+            filtered_count = original_count - len(vulns)
+            if filtered_count > 0:
+                click.echo(f"✓ Filtered {filtered_count} vulnerabilities by state (keeping {state_list})")
         
         if not vulns:
             click.echo("✗ No vulnerabilities found matching filters")

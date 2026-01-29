@@ -19,30 +19,32 @@ class HTMLReportGenerator:
     def generate(
         self,
         output_path: Path,
-        grouped_vulns: List[Tuple[str, Dict[str, List[Dict]]]],
-        vendor_stats: Dict[str, Dict],
-        quick_wins: Dict[str, List[Dict]],
-        metadata: Dict
+        grouped_vulns: List[Tuple[str, Dict[str, List[Dict]]]] = None,
+        vendor_stats: Dict[str, Dict] = None,
+        quick_wins: Dict[str, List[Dict]] = None,
+        metadata: Dict = None,
+        exploitable_vulns: List[Dict] = None,
+        grouped_by_app: List = None,
+        app_stats: Dict = None,
+        server_stats: Dict = None
     ):
-        """
-        Generate HTML report
-        
-        Args:
-            output_path: Path to output HTML file
-            grouped_vulns: Sorted list of (vendor, products_dict) tuples
-            vendor_stats: Statistics for each vendor
-            quick_wins: Quick wins categorization
-            metadata: Report metadata (timestamp, total_vulns, total_assets, filters)
-        """
+        """Generate HTML report"""
+        if not output_path:
+            raise ValueError("Output path is required")
+            
         # Load template
         template = self.env.get_template("report_template.html")
         
         # Render HTML
         html_content = template.render(
-            grouped_vulns=grouped_vulns,
-            vendor_stats=vendor_stats,
-            quick_wins=quick_wins,
-            metadata=metadata
+            grouped_vulns=grouped_vulns or [],
+            vendor_stats=vendor_stats or {},
+            quick_wins=quick_wins or {},
+            metadata=metadata or {},
+            exploitable_vulns=exploitable_vulns or [],
+            grouped_by_app=grouped_by_app or [],
+            app_stats=app_stats or {},
+            server_stats=server_stats or {}
         )
         
         # Write to file

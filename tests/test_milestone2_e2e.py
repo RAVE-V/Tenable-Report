@@ -24,7 +24,7 @@ def test_milestone2_e2e():
         
         # Test HTML report generation
         print("Testing HTML report generation via CLI...")
-        result = runner.invoke(cli, ["generate-report", "--format", "html", "--output", "./reports_test"])
+        result = runner.invoke(cli, ["generate-report", "--format", "html", "--output", "./reports_test", "--fresh"])
         
         print(result.output)
         
@@ -48,7 +48,7 @@ def test_milestone2_e2e():
         
         # Test BOTH format
         print("\nTesting BOTH format (HTML + XLSX)...")
-        result_both = runner.invoke(cli, ["generate-report", "--format", "both", "--output", "./reports_test"])
+        result_both = runner.invoke(cli, ["generate-report", "--format", "both", "--output", "./reports_test", "--fresh"])
         
         assert result_both.exit_code == 0
         assert "XLSX report saved" in result_both.output

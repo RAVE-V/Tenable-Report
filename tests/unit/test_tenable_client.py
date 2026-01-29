@@ -83,7 +83,8 @@ class TestTenableExporter:
     
     @patch("src.tenable_client.requests.Session")
     @patch("src.tenable_client.ThreadPoolExecutor")
-    def test_download_chunks(self, mock_executor, mock_session):
+    @patch("src.tenable_client.as_completed")
+    def test_download_chunks(self, mock_as_completed, mock_executor, mock_session):
         """Test chunk downloading"""
         # Setup mocks
         chunk_data_1 = [{"plugin": {"id": 1}}]
@@ -98,22 +99,25 @@ class TestTenableExporter:
         mock_session_instance.get.side_effect = [mock_response_1, mock_response_2]
         
         # Mock executor to execute immediately
-        def execute_immediately(fn, *args):
-            futures = []
-            for arg in args:
-                future = Mock()
-                future.result.return_value = fn(arg)
-                futures.append(future)
-            return {f: i for i, f in enumerate(futures)}
-        
         mock_executor_instance = MagicMock()
-        mock_executor_instance.__enter__.return_value.submit = Mock(side_effect=lambda fn, arg: Mock(result=lambda: fn(arg)))
         mock_executor.return_value = mock_executor_instance
+        
+        # Create mock futures
+        future1 = Mock()
+        future1.result.return_value = chunk_data_1
+        future2 = Mock()
+        future2.result.return_value = chunk_data_2
+        
+        # Configure submit to return futures
+        mock_executor_instance.__enter__.return_value.submit.side_effect = [future1, future2]
+        
+        # Configure as_completed to yield futures
+        mock_as_completed.side_effect = lambda futures: list(futures)
         
         client = TenableExporter(access_key="test", secret_key="test")
         client.session = mock_session_instance
         
         # Test
-        result = client._download_chunks("test-uuid", 2)
+        result = client._download_chunks("test-uuid", [1, 2])
         
         assert len(result) >= 0  # Basic check since mocking is complex

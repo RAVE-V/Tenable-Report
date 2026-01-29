@@ -45,10 +45,13 @@ class VulnerabilityNormalizer:
             "cve": plugin.get("cve") or [],
             "exploit_available": plugin.get("exploit_available", False),
             "has_patch": plugin.get("has_patch", False),
+            "vpr_score": raw_vuln.get("vpr_score"),
+            "cvss_vector": plugin.get("cvss_vector") or plugin.get("cvss3_vector"),
+            "cvss_base_score": raw_vuln.get("cvss3_base_score") or raw_vuln.get("cvss_base_score"),
             
             # Detection details
             "severity": raw_vuln.get("severity", "info").capitalize(),
-            "state": raw_vuln.get("state", "unknown"),
+            "state": VulnerabilityNormalizer._map_state(raw_vuln.get("state", "unknown")),
             "first_found": VulnerabilityNormalizer._parse_date(raw_vuln.get("first_found")),
             "last_found": VulnerabilityNormalizer._parse_date(raw_vuln.get("last_found")),
             
@@ -83,3 +86,17 @@ class VulnerabilityNormalizer:
             return dt.strftime("%Y-%m-%d %H:%M:%S")
         except (ValueError, AttributeError):
             return date_str
+
+    @staticmethod
+    def _map_state(state: str) -> str:
+        """Map Tenable API state to report state"""
+        if not state:
+            return "UNKNOWN"
+            
+        state_map = {
+            "open": "ACTIVE",
+            "reopened": "RESURFACED",
+            "fixed": "FIXED",
+            "new": "NEW"
+        }
+        return state_map.get(state.lower(), state.upper())

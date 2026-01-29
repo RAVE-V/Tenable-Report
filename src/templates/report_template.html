@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tenable Vulnerability Report - {{ metadata.timestamp }}</title>
     <style>
+        :root {
+            --bg: #0b1220;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --accent: #60a5fa;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,9 +22,11 @@
 
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            background: #0b1220;
-            color: #e5e7eb;
-            line-height: 1.6;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.4;
+            font-size: 12px;
+            /* User requested compact font size */
         }
 
         /* Sticky Navigation */
@@ -24,8 +34,9 @@
             position: sticky;
             top: 0;
             background: #1a2332;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 15px 0;
+            border-bottom: 1px solid var(--border);
+            padding: 8px 0;
+            /* Compact padding */
             z-index: 1000;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
@@ -34,100 +45,90 @@
             max-width: 1250px;
             margin: 0 auto;
             display: flex;
-            gap: 30px;
+            gap: 20px;
             padding: 0 20px;
+            flex-wrap: wrap;
         }
 
         nav a {
-            color: #94a3b8;
+            color: var(--muted);
             text-decoration: none;
             font-weight: 500;
             transition: color 0.2s;
+            font-size: 12px;
         }
 
         nav a:hover,
         nav a.active {
-            color: #60a5fa;
+            color: var(--accent);
         }
 
         .container {
             max-width: 1250px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px 20px;
         }
 
         /* Header */
         header {
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            padding: 40px;
-            border-radius: 12px;
-            margin: 20px 0 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            /* Compact padding */
+            border-radius: 10px;
+            margin: 15px 0 25px;
+            border: 1px solid var(--border);
         }
 
         h1 {
-            font-size: 2.5em;
-            margin-bottom: 20px;
+            font-size: 2em;
+            /* Reduced from 2.5em */
+            margin-bottom: 15px;
         }
 
         .meta-info {
             display: flex;
-            gap: 30px;
+            gap: 20px;
             flex-wrap: wrap;
         }
 
         .meta-item {
             background: rgba(255, 255, 255, 0.1);
-            padding: 12px 20px;
-            border-radius: 8px;
+            padding: 8px 15px;
+            border-radius: 6px;
         }
 
         .meta-label {
             font-size: 0.85em;
-            color: #94a3b8;
-            margin-bottom: 5px;
+            color: var(--muted);
+            margin-bottom: 2px;
         }
 
         .meta-value {
-            font-size: 1.5em;
+            font-size: 1.3em;
+            /* Reduced */
             font-weight: bold;
         }
 
-        /* Quick Wins Section */
-        .quick-wins {
-            background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        /* Quick Wins Link in Header */
+        .quick-win-link {
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s;
+            background: rgba(124, 58, 237, 0.2);
+            border: 1px solid rgba(124, 58, 237, 0.4);
         }
 
-        .quick-wins h2 {
-            font-size: 1.8em;
-            margin-bottom: 15px;
-        }
-
-        .quick-win-stats {
-            display: flex;
-            gap: 20px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        .quick-win-card {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 20px;
-            border-radius: 8px;
-            min-width: 220px;
+        .quick-win-link:hover {
+            transform: translateY(-2px);
         }
 
         /* Section Headers */
         h2 {
-            font-size: 1.8em;
-            margin: 40px 0 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #60a5fa;
+            font-size: 1.5em;
+            /* Reduced */
+            margin: 30px 0 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--accent);
         }
 
         /* Pills */
@@ -135,10 +136,11 @@
             display: inline-block;
             background: #374151;
             color: #9ca3af;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.85em;
-            margin-right: 8px;
+            padding: 2px 10px;
+            /* Compact */
+            border-radius: 999px;
+            font-size: 11px;
+            margin-right: 6px;
         }
 
         .pill.blue {
@@ -149,10 +151,11 @@
         /* Severity Badges */
         .badge {
             display: inline-block;
-            padding: 4px 12px;
+            padding: 2px 8px;
+            /* Compact */
             border-radius: 4px;
-            font-size: 0.85em;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 700;
             text-transform: uppercase;
         }
 
@@ -183,38 +186,41 @@
         /* Cards */
         .card {
             background: #1a2332;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 15px;
+            padding: 15px;
+            margin-bottom: 12px;
         }
 
         /* Tables */
         .table-wrapper {
             overflow-x: auto;
-            margin: 20px 0;
+            margin: 15px 0;
+            border-radius: 8px;
+            border: 1px solid var(--border);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             background: #1a2332;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
+            font-size: 12px;
+            /* Explicit compact font */
         }
 
         th {
             background: #0f172a;
-            color: #94a3b8;
+            color: var(--muted);
             font-weight: 600;
             text-align: left;
-            padding: 12px 15px;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 12px;
+            /* Compact */
+            border-bottom: 2px solid var(--border);
         }
 
         td {
-            padding: 12px 15px;
+            padding: 8px 12px;
+            /* Compact */
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
@@ -229,17 +235,19 @@
         /* Collapsible Details */
         details {
             background: #1a2332;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
             border-radius: 8px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            /* Reduced margin */
             overflow: hidden;
         }
 
         summary {
-            padding: 20px;
+            padding: 12px 15px;
+            /* Compact padding */
             cursor: pointer;
             font-weight: 600;
-            font-size: 1.1em;
+            font-size: 1.05em;
             list-style: none;
             user-select: none;
             transition: background 0.2s;
@@ -259,7 +267,8 @@
         summary::after {
             content: '▶';
             transition: transform 0.2s;
-            color: #60a5fa;
+            color: var(--accent);
+            font-size: 0.9em;
         }
 
         details[open] summary::after {
@@ -267,21 +276,20 @@
         }
 
         details .content {
-            padding: 0 20px 20px;
+            padding: 0 15px 15px;
         }
 
         /* Server Stats */
         .server-stats {
             display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
+            gap: 10px;
             align-items: center;
         }
 
         /* State Badges */
         .state-badge {
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 1px 6px;
+            border-radius: 3px;
             font-size: 0.75em;
             font-weight: 600;
         }
@@ -301,23 +309,13 @@
             color: white;
         }
 
-        /* Subsection */
-        .subsection {
-            margin-top: 25px;
-        }
-
-        .subsection h4 {
-            color: #60a5fa;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        /* Vulnerability Cards */
+        /* Vulnerability Cards (Drill Down) */
         .vuln-card {
             background: #0f172a;
-            border-left: 4px solid #6c757d;
-            padding: 15px;
-            margin-bottom: 10px;
+            border-left: 3px solid #6c757d;
+            padding: 10px 12px;
+            /* Compact */
+            margin-bottom: 8px;
             border-radius: 4px;
         }
 
@@ -339,50 +337,50 @@
 
         .vuln-title {
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            font-size: 1.05em;
         }
 
         .vuln-details {
-            font-size: 0.9em;
-            color: #94a3b8;
-            margin-top: 8px;
+            font-size: 0.95em;
+            color: var(--muted);
         }
 
         .detail-label {
             font-weight: bold;
-            color: #e5e7eb;
+            color: var(--text);
+            margin-right: 4px;
         }
 
         .cve-links {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 5px;
+            gap: 4px;
+            margin-top: 4px;
         }
 
         .cve-link {
             background: #3b82f6;
             color: white;
-            padding: 3px 8px;
+            padding: 2px 6px;
             border-radius: 3px;
             text-decoration: none;
-            font-size: 0.85em;
+            font-size: 10px;
         }
 
         .cve-link:hover {
             background: #2563eb;
         }
 
-        /* Back to Top */
         .back-to-top {
             display: inline-block;
-            margin: 30px 0;
-            color: #60a5fa;
+            margin: 15px 0;
+            color: var(--accent);
             text-decoration: none;
-            font-weight: 500;
+            font-size: 11px;
         }
 
         .back-to-top:hover {
@@ -391,9 +389,10 @@
 
         footer {
             text-align: center;
-            padding: 40px 20px;
+            padding: 30px 20px;
             color: #64748b;
-            margin-top: 60px;
+            margin-top: 40px;
+            font-size: 11px;
         }
     </style>
 </head>
@@ -403,7 +402,11 @@
     <nav>
         <div class="nav-container">
             <a href="#summary" class="active">Summary</a>
-            <a href="#quick-wins">Quick Wins</a>
+            <a href="#app-summary">App Summary</a>
+            <a href="#quick-wins-detail">Quick Wins</a>
+            {% if exploitable_vulns %}
+            <a href="#exploitable" style="color: #ef4444;">Exploitable ({{ exploitable_vulns|length }})</a>
+            {% endif %}
             <a href="#drill-down">Drill-Down</a>
             <a href="#vendors">By Vendor</a>
         </div>
@@ -426,154 +429,313 @@
                     <div class="meta-label">Total Assets</div>
                     <div class="meta-value">{{ metadata.total_assets }}</div>
                 </div>
+
+                <!-- Quick Wins in Header (Clickable) -->
+                {% if quick_wins and quick_wins.total_quick_wins > 0 %}
+                <a href="#quick-wins-detail" class="meta-item quick-win-link">
+                    <div class="meta-label">✨ Quick Wins</div>
+                    <div class="meta-value">{{ quick_wins.total_quick_wins }}</div>
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Quick Win Categories -->
+            {% if quick_wins and quick_wins.total_quick_wins > 0 %}
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                {% if quick_wins.version_threshold|length > 0 %}
+                <span class="pill" style="background: rgba(124, 58, 237, 0.2); color: #d8b4fe;">Version-Threshold: {{
+                    quick_wins.version_threshold|length }}</span>
+                {% endif %}
+                {% if quick_wins.unsupported_product|length > 0 %}
+                <span class="pill" style="background: rgba(219, 39, 119, 0.2); color: #f9a8d4;">Unsupported: {{
+                    quick_wins.unsupported_product|length }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Search Box -->
+            <div style="margin-top: 20px; position: relative;">
+                <input type="text" id="searchInput" placeholder="Search vulnerabilities, CVEs, or hostnames..."
+                    style="width: 100%; padding: 10px 15px 10px 40px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; font-size: 1em;">
+                <span
+                    style="position: absolute; left: 12px; top: 10px; font-size: 1.1em; color: var(--muted);">🔍</span>
             </div>
         </header>
 
-        <!-- Quick Wins Section -->
+        <!-- Application Summary Table -->
+        <section id="app-summary" style="margin-bottom: 30px;">
+            <h2>📊 Application Summary</h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Application</th>
+                            <th>Servers</th>
+                            <th style="color: #ef4444;">Critical</th>
+                            <th style="color: #f97316;">High</th>
+                            <th style="color: #facc15;">Medium</th>
+                            <th style="color: #22c55e;">Low</th>
+                            <th>Total Vulns</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app_name, servers in grouped_by_app %}
+                        {% set stats = app_stats[app_name] %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ app_name }}</td>
+                            <td>{{ stats.server_count }}</td>
+                            <td
+                                style="{% if stats.critical > 0 %}color: #ef4444; font-weight: bold;{% else %}color: #4b5563;{% endif %}">
+                                {{ stats.critical }}</td>
+                            <td
+                                style="{% if stats.high > 0 %}color: #f97316; font-weight: bold;{% else %}color: #4b5563;{% endif %}">
+                                {{ stats.high }}</td>
+                            <td
+                                style="{% if stats.medium > 0 %}color: #facc15; font-weight: bold;{% else %}color: #4b5563;{% endif %}">
+                                {{ stats.medium }}</td>
+                            <td style="{% if stats.low > 0 %}color: #22c55e;{% else %}color: #4b5563;{% endif %}">{{
+                                stats.low }}</td>
+                            <td><span class="pill blue">{{ stats.total }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <a href="#" class="back-to-top">Back to top ↑</a>
+        </section>
+
+        <!-- Quick Wins Detail Section -->
         {% if quick_wins and quick_wins.total_quick_wins > 0 %}
-        <section id="quick-wins" class="quick-wins">
-            <h2>⚡ Quick Wins ({{ quick_wins.total_quick_wins }})</h2>
-            <p>Low-effort, high-impact vulnerabilities that can be quickly resolved</p>
-            <div class="quick-win-stats">
-                {% if quick_wins.version_threshold|length > 0 %}
-                <div class="quick-win-card">
-                    <div class="meta-label">Version-Threshold</div>
-                    <div class="meta-value">{{ quick_wins.version_threshold|length }}</div>
-                    <div style="font-size: 0.9em; margin-top: 5px;">Simple version upgrades</div>
+        <section id="quick-wins-detail" style="margin-bottom: 30px;">
+            <h2>✨ Quick Wins Details</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                {% if quick_wins.version_threshold %}
+                <div class="card">
+                    <h3 style="color: #d8b4fe; margin-bottom: 10px; font-size: 1.2em;">Version Threshold ({{
+                        quick_wins.version_threshold|length }})</h3>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        {% for vuln in quick_wins.version_threshold %}
+                        <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <div style="font-weight: 600;">{{ vuln.plugin_name }}</div>
+                            <div style="font-size: 0.9em; color: var(--muted);">Host: {{ vuln.hostname }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endif %}
-                {% if quick_wins.unsupported_product|length > 0 %}
-                <div class="quick-win-card">
-                    <div class="meta-label">Unsupported Products</div>
-                    <div class="meta-value">{{ quick_wins.unsupported_product|length }}</div>
-                    <div style="font-size: 0.9em; margin-top: 5px;">EOL/deprecated systems</div>
+
+                {% if quick_wins.unsupported_product %}
+                <div class="card">
+                    <h3 style="color: #f9a8d4; margin-bottom: 10px; font-size: 1.2em;">Unsupported Products ({{
+                        quick_wins.unsupported_product|length }})</h3>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        {% for vuln in quick_wins.unsupported_product %}
+                        <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <div style="font-weight: 600;">{{ vuln.plugin_name }}</div>
+                            <div style="font-size: 0.9em; color: var(--muted);">Host: {{ vuln.hostname }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endif %}
             </div>
+            <a href="#" class="back-to-top">Back to top ↑</a>
+        </section>
+        {% endif %}
+
+        {% if exploitable_vulns %}
+        <section id="exploitable" style="margin-bottom: 30px;">
+            <h2 style="color: #ef4444; border-bottom-color: #ef4444;">🔥 Exploitable Vulnerabilities ({{
+                exploitable_vulns|length }})</h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Severity</th>
+                            <th>VPR</th>
+                            <th>Vulnerability</th>
+                            <th>Asset</th>
+                            <th>State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vuln in exploitable_vulns|sort(attribute='vpr_score', reverse=True) %}
+                        {% set vpr = vuln.vpr_score|default(0.0)|float %}
+                        <tr
+                            style="{% if vpr >= 9.0 %}background: rgba(239, 68, 68, 0.15); border-left: 3px solid #ef4444;{% endif %}">
+                            <td><span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity }}</span></td>
+                            <td>
+                                {% if vuln.vpr_score %}
+                                <span class="badge"
+                                    style="background: {% if vpr >= 9 %}#7f1d1d{% elif vpr >= 7 %}#c2410c{% else %}#374151{% endif %};">
+                                    {{ vuln.vpr_score }}
+                                </span>
+                                {% else %}
+                                <span class="pill">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="font-weight: 600;">{{ vuln.plugin_name }}</div>
+                                <div style="font-size: 0.9em; color: var(--muted);">Plugin ID: {{ vuln.plugin_id }}
+                                </div>
+                            </td>
+                            <td>
+                                <div>{{ vuln.hostname }}</div>
+                                <div style="font-size: 0.9em; color: var(--muted);">{{ vuln.ipv4 }}</div>
+                            </td>
+                            <td><span class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <a href="#" class="back-to-top">Back to top ↑</a>
         </section>
         {% endif %}
 
         <!-- Application Drill-Down Section -->
         <section id="drill-down">
             <h2>🔍 Application Drill-Down</h2>
-            <p style="color: #94a3b8; margin-bottom: 20px;">Vulnerabilities grouped by application and server</p>
+            <p style="color: var(--muted); margin-bottom: 15px; font-size: 0.95em;">Vulnerabilities grouped by
+                application and server</p>
 
-            {# Group by application first - this will need backend support #}
-            {# For now, show by vendor as we have the data, note to update backend #}
-            {% for vendor, products in grouped_vulns %}
+            {% for app_name, servers in grouped_by_app %}
+            {% set stats = app_stats[app_name] %}
             <details>
                 <summary>
-                    <span>
-                        <strong>📦 {{ vendor }}</strong>
-                        {% if vendor_stats[vendor] %}
-                        <span class="pill">{{ vendor_stats[vendor].total_vulns }} vulnerabilities</span>
-                        {% endif %}
-                    </span>
-                    <span class="server-stats">
-                        {% if vendor_stats[vendor].critical > 0 %}
-                        <span class="badge sev-critical">{{ vendor_stats[vendor].critical }}</span>
-                        {% endif %}
-                        {% if vendor_stats[vendor].high > 0 %}
-                        <span class="badge sev-high">{{ vendor_stats[vendor].high }}</span>
-                        {% endif %}
-                        {% if vendor_stats[vendor].medium > 0 %}
-                        <span class="badge sev-medium">{{ vendor_stats[vendor].medium }}</span>
-                        {% endif %}
-                    </span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span><strong>🚀 {{ app_name }}</strong></span>
+                        <span style="display: flex; gap: 10px; align-items: center;">
+                            <span class="server-stats">
+                                {% if stats.critical > 0 %}<span class="badge sev-critical">{{ stats.critical }}
+                                    C</span>{% endif %}
+                                {% if stats.high > 0 %}<span class="badge sev-high">{{ stats.high }} H</span>{% endif %}
+                                {% if stats.medium > 0 %}<span class="badge sev-medium">{{ stats.medium }} M</span>{%
+                                endif %}
+                                {% if stats.low > 0 %}<span class="badge sev-low">{{ stats.low }} L</span>{% endif %}
+                            </span>
+                            <span class="pill">{{ stats.server_count }} servers</span>
+                            <span class="pill blue">{{ stats.total }} vulns</span>
+                        </span>
+                    </div>
                 </summary>
                 <div class="content">
-                    {% for product, vulns in products.items() %}
-                    <div class="subsection">
-                        <h4>
-                            {% if product %}
-                            🔹 {{ product }} ({{ vulns|length }} vulnerabilities)
-                            {% else %}
-                            🔹 General ({{ vulns|length }} vulnerabilities)
-                            {% endif %}
-                        </h4>
-
-                        {% for vuln in vulns %}
-                        <div class="vuln-card {{ vuln.severity|lower }}">
-                            <div class="vuln-title">
-                                <span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity }}</span>
-                                {{ vuln.plugin_name }}
-                                {% if vuln.state %}
-                                <span class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span>
-                                {% endif %}
+                    {% for hostname, vulns in servers.items() %}
+                    {% set s_stat = server_stats[hostname] %}
+                    <details style="margin-top: 8px; border-left: 3px solid #3b82f6;">
+                        <summary style="background: rgba(59, 130, 246, 0.1);">
+                            <div
+                                style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <span><strong>🖥️ {{ hostname }}</strong></span>
+                                    <span style="font-size: 0.9em; color: var(--muted);">({{ s_stat.ipv4 }} | {{
+                                        s_stat.os }})</span>
+                                </div>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    {% if s_stat.critical > 0 %}<span class="badge sev-critical">{{ s_stat.critical }}
+                                        C</span>{% endif %}
+                                    {% if s_stat.high > 0 %}<span class="badge sev-high">{{ s_stat.high }} H</span>{%
+                                    endif %}
+                                    {% if s_stat.medium > 0 %}<span class="badge sev-medium">{{ s_stat.medium }}
+                                        M</span>{% endif %}
+                                    {% if s_stat.low > 0 %}<span class="badge sev-low">{{ s_stat.low }} L</span>{% endif
+                                    %}
+                                    <span class="pill" style="margin-left: 5px;">{{ s_stat.total }} Total</span>
+                                </div>
                             </div>
-                            <div class="vuln-details">
-                                <div>
-                                    <span class="detail-label">Hostname:</span> {{ vuln.hostname or 'N/A' }}
+                        </summary>
+                        <div class="content">
+                            {% for vuln in vulns %}
+                            <div class="vuln-card {{ vuln.severity|lower }}">
+                                <div class="vuln-title">
+                                    <span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity }}</span>
+                                    {{ vuln.plugin_name }}
                                 </div>
-                                {% if vuln.plugin_id %}
-                                <div>
-                                    <span class="detail-label">Plugin ID:</span> {{ vuln.plugin_id }}
-                                </div>
-                                {% endif %}
-                                {% if vuln.cve %}
-                                <div>
-                                    <span class="detail-label">CVEs:</span>
+                                <div class="vuln-details">
+                                    <div style="margin-bottom: 5px;">
+                                        <span class="detail-label">IP:</span> {{ vuln.ipv4 }} |
+                                        <span class="detail-label">State:</span> <span
+                                            class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span>
+                                    </div>
+                                    {% if vuln.vpr_score %}
+                                    <div style="margin-bottom: 5px;">
+                                        <span class="detail-label">VPR:</span> {{ vuln.vpr_score }}
+                                    </div>
+                                    {% endif %}
+                                    {% if vuln.cve %}
                                     <div class="cve-links">
                                         {% for cve in vuln.cve[:5] %}
                                         <a href="https://nvd.nist.gov/vuln/detail/{{ cve }}" target="_blank"
                                             class="cve-link">{{ cve }}</a>
                                         {% endfor %}
-                                        {% if vuln.cve|length > 5 %}
-                                        <span class="pill">+{{ vuln.cve|length - 5 }} more</span>
-                                        {% endif %}
                                     </div>
+                                    {% endif %}
+                                    {% if vuln.solution %}
+                                    <div style="margin-top: 5px; font-style: italic; color: #cbd5e1;">
+                                        <span class="detail-label">Solution:</span>
+                                        {{ vuln.solution[:250] }}{% if vuln.solution|length > 250 %}...{% endif %}
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
-                                {% if vuln.solution %}
-                                <div>
-                                    <span class="detail-label">Solution:</span>
-                                    {{ vuln.solution[:200] }}{% if vuln.solution|length > 200 %}...{% endif %}
-                                </div>
-                                {% endif %}
                             </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
-                    </div>
+                    </details>
                     {% endfor %}
                 </div>
             </details>
             {% endfor %}
-
             <a href="#" class="back-to-top">Back to top ↑</a>
         </section>
 
-        <!-- Vendor Section (Legacy) -->
+        <!-- Vendor Section -->
         <section id="vendors">
             <h2>📦 By Vendor</h2>
-            <p style="color: #94a3b8; margin-bottom: 20px;">Traditional vendor-based grouping</p>
-
             {% for vendor, products in grouped_vulns %}
-            <div class="card">
-                <h3 style="margin-bottom: 15px;">{{ vendor }}</h3>
-                {% if vendor_stats[vendor] %}
-                <div style="margin-bottom: 15px;">
-                    {% if vendor_stats[vendor].critical > 0 %}
-                    <span class="badge sev-critical">{{ vendor_stats[vendor].critical }} Critical</span>
-                    {% endif %}
-                    {% if vendor_stats[vendor].high > 0 %}
-                    <span class="badge sev-high">{{ vendor_stats[vendor].high }} High</span>
-                    {% endif %}
-                    {% if vendor_stats[vendor].medium > 0 %}
-                    <span class="badge sev-medium">{{ vendor_stats[vendor].medium }} Medium</span>
-                    {% endif %}
-                    <span class="pill blue">{{ vendor_stats[vendor].total_vulns }} total</span>
+            {% set v_stat = vendor_stats[vendor] %}
+            <details>
+                <summary>
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <span><strong>📦 {{ vendor }}</strong></span>
+                        <div style="display: flex; gap: 10px;">
+                            <span class="pill blue">{{ v_stat.total_vulns }} Patch Items</span>
+                            <span class="pill" style="background: #4b5563; color: white;">{{ v_stat.affected_assets }}
+                                Devices</span>
+                        </div>
+                    </div>
+                </summary>
+                <div class="content">
+                    {% for product, vulns in products.items() %}
+                    {% set p_stat = v_stat.prod_stats[product] %}
+                    <details style="margin-top: 8px; border-left: 2px solid #64748b;">
+                        <summary style="background: rgba(255, 255, 255, 0.05); padding: 8px 12px;">
+                            <div style="display: flex; justify-content: space-between; width: 100%;">
+                                <span><strong>🔹 {{ product or 'General' }}</strong></span>
+                                <div style="display: flex; gap: 10px;">
+                                    <span class="pill">{{ p_stat.total_vulns }} Items</span>
+                                    <span class="pill" style="background: #4b5563; color: white;">{{
+                                        p_stat.affected_assets }} Devices</span>
+                                </div>
+                            </div>
+                        </summary>
+                        <div class="content">
+                            {% for vuln in vulns %}
+                            <div class="vuln-card {{ vuln.severity|lower }}">
+                                <div class="vuln-title">
+                                    <span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity }}</span>
+                                    {{ vuln.plugin_name }}
+                                </div>
+                                <div class="vuln-details">
+                                    <div><span class="detail-label">Host:</span> {{ vuln.hostname }}</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    {% endfor %}
                 </div>
-                {% endif %}
-
-                {% for product, vulns in products.items() %}
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <strong>{{ product or 'General' }}</strong>
-                    <span class="pill">{{ vulns|length }} vulnerabilities</span>
-                </div>
-                {% endfor %}
-            </div>
+            </details>
             {% endfor %}
-
             <a href="#" class="back-to-top">Back to top ↑</a>
         </section>
 
@@ -583,16 +745,38 @@
     </div>
 
     <script>
-        // Smooth scrolling for anchor links
+        // Smooth scrolling
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
                 const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
-                }
+                if (target) { target.scrollIntoView({ behavior: 'smooth' }); }
             });
         });
+
+        // Search Functionality
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', function (e) {
+                const term = e.target.value.toLowerCase();
+                // Filter Drill-Down Cards
+                document.querySelectorAll('.vuln-card').forEach(card => {
+                    const text = card.innerText.toLowerCase();
+                    if (text.includes(term)) {
+                        card.style.display = 'block';
+                        let parent = card.closest('details');
+                        if (parent && term.length > 0) parent.open = true;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                // Filter Tables
+                document.querySelectorAll('table tbody tr').forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(term) ? '' : 'none';
+                });
+            });
+        }
     </script>
 </body>
 
