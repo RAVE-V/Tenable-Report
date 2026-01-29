@@ -129,6 +129,96 @@ def sync_db(limit, days):
 
 
 @cli.command()
+@click.option("--fresh", is_flag=True, help="Fetch fresh data from API instead of using cache")
+def inspect_data(fresh):
+    """Inspect available filter values in your Tenable data"""
+    try:
+        Config.validate()
+        
+        from src.tenable_client import TenableExporter
+        from src.processors.normalizer import VulnerabilityNormalizer
+        from src.cache import VulnCache
+        from src.utils.device_detector import DeviceTypeDetector
+        from collections import Counter
+        
+        click.echo("🔍 Inspecting Tenable vulnerability data...\n")
+        
+        # Load data (from cache or API)
+        cache = VulnCache()
+        raw_vulns = None
+        
+        if not fresh:
+            cache_info = cache.get_info({})
+            if cache_info:
+                cached_data = cache.get({})
+                if cached_data:
+                    raw_vulns = cached_data['vulnerabilities']
+                    click.echo(f"✓ Using cached data ({len(raw_vulns)} vulnerabilities)\n")
+        
+        if raw_vulns is None:
+            click.echo("Fetching data from Tenable API...")
+            client = TenableExporter()
+            raw_vulns = client.export_vulnerabilities({})
+            cache.set({}, raw_vulns)
+            click.echo(f"✓ Fetched {len(raw_vulns)} vulnerabilities\n")
+        
+        if not raw_vulns:
+            click.echo("✗ No data found!")
+            return
+        
+        # Normalize
+        vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
+        
+        # Analyze available filters
+        click.echo("=" * 60)
+        click.echo("AVAILABLE FILTER VALUES")
+        click.echo("=" * 60)
+        
+        # States
+        states = Counter(v.get('state', 'UNKNOWN') for v in vulns)
+        click.echo(f"\n📌 STATES (total: {len(vulns)} vulnerabilities)")
+        for state, count in states.most_common():
+            click.echo(f"   {state}: {count}")
+        
+        # Severities
+        severities = Counter(v.get('severity', 'Unknown') for v in vulns)
+        click.echo(f"\n🔥 SEVERITIES")
+        for sev, count in severities.most_common():
+            click.echo(f"   {sev}: {count}")
+        
+        # Operating Systems
+        os_list = Counter(v.get('operating_system', 'Unknown') for v in vulns if v.get('operating_system'))
+        click.echo(f"\n💻 TOP 10 OPERATING SYSTEMS")
+        for os, count in os_list.most_common(10):
+            click.echo(f"   {os}: {count}")
+        
+        # Device Type Detection
+        detector = DeviceTypeDetector()
+        servers = sum(1 for v in vulns if detector.is_server(v.get('operating_system')))
+        workstations = sum(1 for v in vulns if detector.is_workstation(v.get('operating_system')))
+        other = len(vulns) - servers - workstations
+        
+        click.echo(f"\n🖥️  DEVICE CLASSIFICATION")
+        click.echo(f"   Servers: {servers} vulnerabilities")
+        click.echo(f"   Workstations: {workstations} vulnerabilities")
+        click.echo(f"   Other: {other} vulnerabilities")
+        
+        # Unique assets
+        unique_assets = len(set(v.get('asset_uuid') for v in vulns if v.get('asset_uuid')))
+        click.echo(f"\n📊 UNIQUE ASSETS: {unique_assets}")
+        
+        click.echo("\n" + "=" * 60)
+        click.echo("💡 TIP: Use these values with --state and --severity filters")
+        click.echo("=" * 60 + "\n")
+        
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        logger.exception("inspect-data failed")
+        sys.exit(1)
+
+
+
+@cli.command()
 @click.option("--tag", help="Filter by tag (format: Category:Value)")
 @click.option("--severity", help="Filter by severity (comma-separated: Critical,High,Medium,Low). Default: ALL")
 @click.option("--state", help="Filter by state (comma-separated: ACTIVE,RESURFACED,NEW). Default: ALL")
