@@ -1,7 +1,7 @@
 """SQLAlchemy ORM models for Tenable Report Generator"""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, UniqueConstraint, Enum, Text, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -27,7 +27,7 @@ class Server(Base):
     ipv4 = Column(String(45))  # IPv4 address
     operating_system = Column(String(255))
     last_seen = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
     mappings = relationship("ServerApplicationMap", back_populates="server", cascade="all, delete-orphan")
@@ -45,7 +45,7 @@ class Application(Base):
     app_type = Column(String(100))
     description = Column(Text)
     owner_team = Column(String(255))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
     mappings = relationship("ServerApplicationMap", back_populates="application", cascade="all, delete-orphan")
@@ -63,7 +63,7 @@ class ServerApplicationMap(Base):
     app_id = Column(String(36), ForeignKey("applications.app_id", ondelete="CASCADE"), nullable=False, index=True)
     confidence = Column(Enum(ConfidenceLevel), nullable=False, default=ConfidenceLevel.AUTO)
     source = Column(String(255))  # Source of mapping (e.g., "manual", "cmdb", "auto-detected")
-    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     updated_by = Column(String(255))
     
     # Relationships
@@ -90,7 +90,7 @@ class VendorProductRule(Base):
     keyword = Column(String(255))
     priority = Column(Integer, default=0, index=True)  # Higher priority rules checked first
     enabled = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_by = Column(String(255))
     
     def __repr__(self):
@@ -107,7 +107,7 @@ class PatchCatalogOverride(Base):
     vendor_override = Column(String(255))
     product_override = Column(String(255))
     reason = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_by = Column(String(255))
     
     def __repr__(self):
@@ -119,7 +119,7 @@ class ReportRun(Base):
     __tablename__ = "report_runs"
     
     run_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     filters_json = Column(JSON)  # Store filter criteria as JSON
     export_job_uuid = Column(String(255))
     total_vulns = Column(Integer)

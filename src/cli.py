@@ -3,7 +3,7 @@
 import click
 import logging
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from src.config import Config
@@ -78,12 +78,20 @@ def sync_db(limit, days):
             asset_uuid = vuln.get("asset", {}).get("uuid")
             if asset_uuid and asset_uuid not in assets_map:
                 asset = vuln.get("asset", {})
+                
+                # Handle ipv4 - can be a list or string
+                ipv4_value = asset.get("ipv4")
+                if isinstance(ipv4_value, list):
+                    ipv4_str = ", ".join(ipv4_value) if ipv4_value else None
+                else:
+                    ipv4_str = ipv4_value
+                
                 assets_map[asset_uuid] = {
                     "asset_uuid": asset_uuid,
                     "hostname": asset.get("hostname"),
-                    "ipv4": asset.get("ipv4"),
+                    "ipv4": ipv4_str,
                     "operating_system": asset.get("operating_system"),
-                    "last_seen": datetime.utcnow()
+                    "last_seen": datetime.now(timezone.utc)
                 }
         
         click.echo(f"Found {len(assets_map)} unique assets")
