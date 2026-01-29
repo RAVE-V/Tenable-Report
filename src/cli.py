@@ -130,11 +130,12 @@ def sync_db(limit, days):
 @cli.command()
 @click.option("--tag", help="Filter by tag (format: Category:Value)")
 @click.option("--severity", help="Filter by severity (comma-separated: Critical,High,Medium,Low)")
+@click.option("--state", help="Filter by state (comma-separated: ACTIVE,RESURFACED,NEW). Default: ACTIVE only")
 @click.option("--format", type=click.Choice(["xlsx", "html", "both"]), default="xlsx", help="Output format")
 @click.option("--output", type=click.Path(), default="./reports", help="Output directory")
 @click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
 @click.option("--use-cache", is_flag=True, help="Use cached data if available (skip freshness check)")
-def generate_report(tag, severity, format, output, fresh, use_cache):
+def generate_report(tag, severity, state, format, output, fresh, use_cache):
     """Generate vulnerability report"""
     try:
         Config.validate()
@@ -163,6 +164,12 @@ def generate_report(tag, severity, format, output, fresh, use_cache):
             severity_list = [s.strip().lower() for s in severity.split(",")]
             filters["severity"] = severity_list
             click.echo(f"Filter: severity = {severity_list}")
+        
+        # Default to ACTIVE only if no state specified
+        state_list = ["ACTIVE"]
+        if state:
+            state_list = [s.strip().upper() for s in state.split(",")]
+        click.echo(f"Filter: state = {state_list}")
         
         # Check cache
         cache = VulnCache()
@@ -208,6 +215,16 @@ def generate_report(tag, severity, format, output, fresh, use_cache):
         # Normalize data
         click.echo("Normalizing vulnerability data...")
         vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
+        
+        # Filter by state (default: ACTIVE only)
+        original_count = len(vulns)
+        vulns = [v for v in vulns if v.get('state', 'ACTIVE').upper() in state_list]
+        if len(vulns) < original_count:
+            click.echo(f"✓ Filtered {original_count - len(vulns)} vulnerabilities (keeping only: {', '.join(state_list)})")
+        
+        if not vulns:
+            click.echo(f"✗ No vulnerabilities found with state: {', '.join(state_list)}")
+            sys.exit(0)
         
         # Vendor Detection
         click.echo("Detecting vendors and products...")
