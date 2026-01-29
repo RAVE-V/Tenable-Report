@@ -133,7 +133,7 @@ def sync_db(limit, days):
 @click.option("--state", help="Filter by state (comma-separated: ACTIVE,RESURFACED,NEW). Default: ALL")
 @click.option("--format", type=click.Choice(["xlsx", "html", "both"]), default="xlsx", help="Output format")
 @click.option("--output", type=click.Path(), default="./reports", help="Output directory")
-@click.option("--servers-only/--all-devices", default=True, help="Only include servers (default) or all devices")
+@click.option("--servers-only/--all-devices", default=False, help="Only include servers or all devices (default: all devices for testing)")
 @click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
 @click.option("--use-cache", is_flag=True, help="Use cached data if available (skip freshness check)")
 def generate_report(tag, severity, state, format, output, servers_only, fresh, use_cache):
@@ -323,7 +323,7 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
 @click.option("--output", type=click.Path(), default="./reports", help="Output directory")
 @click.option("--sort-by", type=click.Choice(["critical", "high", "total", "hostname"]), default="critical", help="Sort servers by")
 @click.option("--min-vulns", type=int, default=0, help="Only show servers with at least N vulnerabilities")
-@click.option("--servers-only/--all-devices", default=True, help="Only include servers (default) or all devices")
+@click.option("--servers-only/--all-devices", default=False, help="Only include servers or all devices (default: all devices for testing)")
 @click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API (ignore cache)")
 @click.option("--use-cache", is_flag=True, help="Use cached data if available (skip freshness check)")
 def server_report(severity, state, format, output, sort_by, min_vulns, servers_only, fresh, use_cache):
@@ -342,16 +342,10 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
         # Parse filters
         filters = {}
         
-        if severity:
-            severity_list = [s.strip().lower() for s in severity.split(",")]
-            filters["severity"] = severity_list
-            click.echo(f"Filter: severity = {severity_list}")
-        
-        # Default to ACTIVE only if no state specified
-        state_list = ["ACTIVE"]
-        if state:
-            state_list = [s.strip().upper() for s in state.split(",")]
-        click.echo(f"Filter: state = {state_list}")
+        # TESTING: Severity/State filtering disabled
+        click.echo("Filter: severity = ALL (disabled for testing)")
+        click.echo("Filter: state = ALL (disabled for testing)")
+        state_list = None
         
         # Check cache
         cache = VulnCache()
@@ -408,12 +402,8 @@ def server_report(severity, state, format, output, sort_by, min_vulns, servers_o
             if filtered_count > 0:
                 click.echo(f"✓ Filtered {filtered_count} non-server devices (servers only)")
         
-        # Filter by state
-        original_count = len(vulns)
-        vulns = [v for v in vulns if v.get('state', 'ACTIVE').upper() in state_list]
-        if len(vulns) < original_count:
-            filtered_count = original_count - len(vulns)
-            click.echo(f"✓ Filtered {filtered_count} vulnerabilities (keeping only: {', '.join(state_list)})")
+        # TESTING: State filtering completely disabled
+        click.echo("✓ State filtering disabled for testing - keeping ALL vulnerabilities")
         
         if not vulns:
             click.echo("✗ No vulnerabilities found matching filters")
