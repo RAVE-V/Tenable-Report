@@ -241,6 +241,7 @@ def sync_all(fresh):
                 cache.save(filters, raw_vulns, None)
         
         click.echo(f"   ✓ {len(raw_vulns)} raw vulnerabilities fetched")
+        click.echo("   💾 Data cached - if errors occur, rerun without --fresh")
         
         # Step 2: Normalize data
         click.echo("🔄 Step 2/4: Normalizing vulnerability data...")
