@@ -357,6 +357,15 @@ def generate_report(tag, severity, state, format, output, servers_only, fresh, u
             if len(vulns) == 0:
                 click.echo(f"  ⚠️  WARNING: No servers detected! Your OS values might not match server patterns.")
                 click.echo(f"  💡 Try running with --all-devices to see all data")
+                # Show sample OS values for debugging
+                from collections import Counter
+                raw_os_values = [v.get('operating_system') for v in VulnerabilityNormalizer.normalize_batch(raw_vulns)]
+                unique_os = Counter(str(os) for os in raw_os_values if os)
+                click.echo(f"\n  📋 Sample OS values in your data (top 5):")
+                for os_val, cnt in unique_os.most_common(5):
+                    device_type = detector.detect_device_type(os_val)
+                    click.echo(f"     '{os_val}' -> classified as: {device_type} ({cnt} vulns)")
+
         
         
         # Apply state filtering on normalized data
