@@ -138,7 +138,7 @@ class SyncManager:
                 print("   Fresh mode: Ignoring cache, fetching from API...")
                 client = TenableExporter()
                 raw_vulns = client.export_vulnerabilities(filters)
-                cache.save(filters, raw_vulns, None)
+                cache.set(filters, raw_vulns)
             else:
                 cached = cache.get(filters)
                 if cached:
@@ -148,7 +148,7 @@ class SyncManager:
                     print("   Cache miss, fetching from Tenable API...")
                     client = TenableExporter()
                     raw_vulns = client.export_vulnerabilities(filters)
-                    cache.save(filters, raw_vulns, None)
+                    cache.set(filters, raw_vulns)
             
             print(f"   ✓ {len(raw_vulns)} raw vulnerabilities fetched")
             print("   💾 Data cached - if errors occur, rerun without --fresh")
