@@ -217,13 +217,17 @@ def generate_report(tag, severity, state, format, output, fresh, use_cache):
         vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
         
         # Filter by state (default: ACTIVE only)
+        # Note: If state field is missing, treat as ACTIVE
         original_count = len(vulns)
         vulns = [v for v in vulns if v.get('state', 'ACTIVE').upper() in state_list]
         if len(vulns) < original_count:
-            click.echo(f"✓ Filtered {original_count - len(vulns)} vulnerabilities (keeping only: {', '.join(state_list)})")
+            filtered_count = original_count - len(vulns)
+            click.echo(f"✓ Filtered {filtered_count} vulnerabilities (keeping only: {', '.join(state_list)})")
+            click.echo(f"  Tip: Use --state ACTIVE,RESURFACED,NEW to include all states")
         
         if not vulns:
             click.echo(f"✗ No vulnerabilities found with state: {', '.join(state_list)}")
+            click.echo(f"  Tip: Try --state ACTIVE,RESURFACED,NEW or use --fresh to re-download data")
             sys.exit(0)
         
         # Vendor Detection
