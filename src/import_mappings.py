@@ -32,7 +32,10 @@ class MappingImporter:
             for col in self.REQUIRED_COLUMNS:
                 if df[col].isna().any():
                     empty_rows = df[df[col].isna()].index.tolist()
-                    errors.append(f"Column '{col}' has empty values in rows: {empty_rows}")
+                    if len(empty_rows) > 10:
+                        errors.append(f"Column '{col}' has empty values in rows: {', '.join(map(str, empty_rows[:10]))} and {len(empty_rows) - 10} more")
+                    else:
+                        errors.append(f"Column '{col}' has empty values in rows: {empty_rows}")
         
         return errors
     
@@ -78,9 +81,9 @@ class MappingImporter:
                     server_name = str(row['server_name']).strip()
                     app_name = str(row['application_name']).strip()
                     
-                    # Get or create Server
+                    # Get or create Server (Case-insensitive lookup)
                     server = session.query(Server).filter(
-                        (Server.hostname == server_name) | (Server.asset_uuid == server_name)
+                        (Server.hostname.ilike(server_name)) | (Server.asset_uuid == server_name)
                     ).first()
                     
                     if not server:
@@ -93,8 +96,8 @@ class MappingImporter:
                     else:
                         stats['servers_found'] += 1
                     
-                    # Get or create Application
-                    app = session.query(Application).filter_by(app_name=app_name).first()
+                    # Get or create Application (Case-insensitive lookup)
+                    app = session.query(Application).filter(Application.app_name.ilike(app_name)).first()
                     
                     if not app:
                         # Create new application

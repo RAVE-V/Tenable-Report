@@ -57,8 +57,14 @@ class QuickWinsDetector:
             True if this is a version-threshold vulnerability
         """
         plugin_name = vuln.get("plugin_name", "").lower()
-        description = vuln.get("description", "").lower()
-        solution = vuln.get("solution", "").lower()
+        description = vuln.get("description", "")
+        if description is None:
+            description = ""
+        description = description.lower()
+        solution = vuln.get("solution", "")
+        if solution is None:
+            solution = ""
+        solution = solution.lower()
         
         combined_text = f"{plugin_name} {description} {solution}"
         
@@ -81,9 +87,18 @@ class QuickWinsDetector:
             True if this is an unsupported product vulnerability
         """
         plugin_name = vuln.get("plugin_name", "").lower()
-        description = vuln.get("description", "").lower()
-        solution = vuln.get("solution", "").lower()
-        synopsis = vuln.get("synopsis", "").lower()
+        description = vuln.get("description", "")
+        if description is None:
+            description = ""
+        description = description.lower()
+        solution = vuln.get("solution", "")
+        if solution is None:
+            solution = ""
+        solution = solution.lower()
+        synopsis = vuln.get("synopsis", "")
+        if synopsis is None:
+            synopsis = ""
+        synopsis = synopsis.lower()
         
         combined_text = f"{plugin_name} {description} {solution} {synopsis}"
         

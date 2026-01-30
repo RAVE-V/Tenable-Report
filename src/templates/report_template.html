@@ -779,6 +779,7 @@
                                     <th>VPR</th>
                                     <th>Vulnerability</th>
                                     <th>Asset</th>
+                                    <th>Application</th>
                                     <th>State</th>
                                 </tr>
                             </thead>
@@ -808,6 +809,7 @@
                                         <div>{{ vuln.hostname }}</div>
                                         <div style="font-size: 0.9em; color: var(--muted);">{{ vuln.ipv4 }}</div>
                                     </td>
+                                    <td><span class="pill blue">{{ vuln.application }}</span></td>
                                     <td><span class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span>
                                     </td>
                                 </tr>
