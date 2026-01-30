@@ -212,6 +212,24 @@ class SyncManager:
                     'raw_data': json.dumps(raw_v, default=str), 
                 })
             
+            # Deduplicate processed_objects based on asset_uuid and plugin_id
+            unique_map = {}
+            duplicates_count = 0
+            final_objects = []
+            
+            for obj in processed_objects:
+                key = (obj['asset_uuid'], obj['plugin_id'])
+                if key in unique_map:
+                    duplicates_count += 1
+                else:
+                    unique_map[key] = True
+                    final_objects.append(obj)
+            
+            if duplicates_count > 0:
+                print(f"   ℹ️  Removed {duplicates_count} duplicate vulnerabilities (same asset+plugin)")
+            
+            processed_objects = final_objects
+
             # Count device types
             device_counts = Counter(p['device_type'] for p in processed_objects)
             for dtype, count in device_counts.items():
