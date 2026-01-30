@@ -205,6 +205,41 @@ class MappingImporter:
                         'source': '',
                         'updated_by': ''
                     })
+            
+            # ---------------------------------------------------------
+            # NEW LOGIC: Also fetch assets from Vulnerabilities table
+            # ---------------------------------------------------------
+            from src.database.models import Vulnerability
+            
+            # Get distinct assets from Vulnerability table
+            vuln_assets = session.query(
+                Vulnerability.asset_uuid, 
+                Vulnerability.hostname
+            ).distinct().all()
+            
+            # Create set of existing server hostnames/uuids for fast lookup
+            existing_hostnames = {s['server_name'] for s in servers_data if s['server_name']}
+            
+            new_assets_count = 0
+            for v_asset_uuid, v_hostname in vuln_assets:
+                # Determine primary identifier (hostname preferred)
+                identifier = v_hostname if v_hostname else v_asset_uuid
+                
+                if identifier and identifier not in existing_hostnames:
+                    # Found a new asset not in Server inventory!
+                    servers_data.append({
+                        'server_name': identifier,
+                        'application_name': '', # Empty for user to fill
+                        'confidence': 'MANUAL',
+                        'source': 'Tenable Scan (Unmapped)',
+                        'updated_by': ''
+                    })
+                    existing_hostnames.add(identifier)
+                    new_assets_count += 1
+            
+            if new_assets_count > 0:
+                click.echo(f"  Start: Added {new_assets_count} unmapped assets from recent scan")
+
         
         # If no servers in DB, create example template
         if not servers_data:
