@@ -27,10 +27,12 @@ class MappingImporter:
         if missing_cols:
             errors.append(f"Missing required columns: {', '.join(missing_cols)}")
         
-        # Check for empty required columns
+        # Check for empty required columns (only server_name is strictly required to have a value)
         if not errors:
-            for col in self.REQUIRED_COLUMNS:
-                if df[col].isna().any():
+            # We strictly require server_name, but application_name can be empty (we'll just skip those rows)
+            strict_cols = ['server_name']
+            for col in strict_cols:
+                if col in df.columns and df[col].isna().any():
                     empty_rows = df[df[col].isna()].index.tolist()
                     if len(empty_rows) > 10:
                         errors.append(f"Column '{col}' has empty values in rows: {', '.join(map(str, empty_rows[:10]))} and {len(empty_rows) - 10} more")
@@ -60,6 +62,32 @@ class MappingImporter:
         errors = self.validate_excel(df)
         if errors:
             raise ValueError("Excel validation failed:\n" + "\n".join(f"  - {err}" for err in errors))
+            
+        # Filter out rows with empty application_name
+        if 'application_name' in df.columns:
+            # Normalize to string and strip
+            df['application_name'] = df['application_name'].fillna('').astype(str).str.strip()
+            # Count total before
+            total_rows = len(df)
+            # Filter
+            df = df[df['application_name'] != '']
+            skipped_rows = total_rows - len(df)
+            
+            if skipped_rows > 0:
+                click.echo(f"ℹ️  Skipping {skipped_rows} rows with no application name (unmapped)")
+                
+        if len(df) == 0:
+            click.echo("⚠️  No valid mappings found to import after filtering.")
+            return {
+                'total_rows': 0,
+                'servers_created': 0,
+                'servers_found': 0,
+                'apps_created': 0,
+                'apps_found': 0,
+                'mappings_created': 0,
+                'mappings_updated': 0,
+                'errors': []
+            }
         
         stats = {
             'total_rows': len(df),
