@@ -230,7 +230,8 @@ class ReportManager:
                 "total_vulns": len(vulns),
                 "total_assets": len(set(v["asset_uuid"] for v in vulns if v["asset_uuid"])),
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "severity_counts": dict(severity_counts)
+                "severity_counts": dict(severity_counts),
+                "mapped_servers": sum(len(servers) for app, servers in grouped_by_app.items() if app != "Unassigned")
             }
             
             if format in ["xlsx", "both"]:
