@@ -156,6 +156,7 @@ class MappingImporter:
                 session.commit()
                 click.echo("\n✓ Changes committed to database")
             else:
+                session.rollback()  # Explicitly rollback for dry run to override context manager commit
                 click.echo("\n🔍 DRY RUN - No changes saved")
         
         return stats

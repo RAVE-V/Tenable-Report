@@ -18,7 +18,16 @@ class Config:
     USER_AGENT = os.getenv("USER_AGENT", "TenableReportGenerator/1.0")
     
     # Database Configuration
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./tenable_reports.db")
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    DATABASE_PATH = PROJECT_ROOT / "tenable_reports.db"
+    
+    _env_db_url = os.getenv("DATABASE_URL")
+    if _env_db_url and _env_db_url.startswith("sqlite:///./"):
+        # Fix relative path from .env to be absolute based on project root
+        db_name = _env_db_url.replace("sqlite:///./", "")
+        DATABASE_URL = f"sqlite:///{(PROJECT_ROOT / db_name).as_posix()}"
+    else:
+        DATABASE_URL = _env_db_url or f"sqlite:///{DATABASE_PATH.as_posix()}"
     
     # Export Configuration
     EXPORT_MAX_ASSETS_PER_CHUNK = int(os.getenv("EXPORT_MAX_ASSETS_PER_CHUNK", "5000"))
