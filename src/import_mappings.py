@@ -224,8 +224,12 @@ class MappingImporter:
         servers_data = []
         
         with get_db_session() as session:
-            # Get all servers
-            servers = session.query(Server).all()
+            # Query servers - filter by device_type if servers_only is True
+            server_query = session.query(Server)
+            if servers_only:
+                server_query = server_query.filter(Server.device_type == 'server')
+                safe_echo("  Filter: servers table device_type = server")
+            servers = server_query.all()
             
             for server in servers:
                 # Check for existing mappings
