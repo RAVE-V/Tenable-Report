@@ -198,8 +198,36 @@
         }
 
         .pill.blue {
-            background: #1e40af;
+            background: rgba(59, 130, 246, 0.2);
             color: #93c5fd;
+        }
+
+        .pill.critical {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .pill.high {
+            background: rgba(249, 115, 22, 0.2);
+            color: #fdba74;
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+
+        .pill.medium {
+            background: rgba(250, 204, 21, 0.2);
+            color: #fde047;
+            border: 1px solid rgba(250, 204, 21, 0.3);
+        }
+
+        .pill.low {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        background: #1e40af;
+        color: #93c5fd;
         }
 
         /* Severity Badges */
@@ -555,6 +583,7 @@
     <nav>
         <div class="nav-container">
             <a href="#summary" class="active">Summary</a>
+            <a href="#team-summary">Team Summary</a>
             <a href="#app-summary">App Summary</a>
             <a href="#quick-wins-detail">Quick Wins</a>
             {% if exploitable_vulns %}
@@ -700,7 +729,7 @@
                                             Crit</th>
                                         <th style="text-align: center; padding: 6px 4px; color: #f97316; width: 50px;">
                                             High</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #eab308; width: 50px;">
+                                        <th style="text-align: center; padding: 6px 4px; color: #facc15; width: 50px;">
                                             Med</th>
                                         <th style="text-align: center; padding: 6px 4px; color: #22c55e; width: 50px;">
                                             Low</th>
@@ -725,7 +754,7 @@
                                             style="text-align: center; padding: 6px 4px; color: {% if srv_stats.high|default(0) > 0 %}#f97316{% else %}#4b5563{% endif %};">
                                             {{ srv_stats.high|default(0) }}</td>
                                         <td
-                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.medium|default(0) > 0 %}#eab308{% else %}#4b5563{% endif %};">
+                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.medium|default(0) > 0 %}#facc15{% else %}#4b5563{% endif %};">
                                             {{ srv_stats.medium|default(0) }}</td>
                                         <td
                                             style="text-align: center; padding: 6px 4px; color: {% if srv_stats.low|default(0) > 0 %}#22c55e{% else %}#4b5563{% endif %};">

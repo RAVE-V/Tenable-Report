@@ -227,8 +227,15 @@ class ReportManager:
                 }
                 for hostname, host_vulns in servers.items():
                     first_vuln = host_vulns[0] if host_vulns else {}
+                    os_data = first_vuln.get("operating_system") or "Unknown OS"
+                    if isinstance(os_data, list):
+                        os_data = ", ".join(os_data)
+                    elif isinstance(os_data, str) and os_data.startswith("[") and os_data.endswith("]"):
+                        # Clean up string representation of list e.g. "['Windows']"
+                        os_data = os_data.strip("[]").replace("'", "").replace('"', "")
+                    
                     h_stats = {
-                        "os": first_vuln.get("operating_system") or "Unknown OS",
+                        "os": os_data,
                         "ipv4": first_vuln.get("ipv4") or "N/A",
                         "critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0
                     }
