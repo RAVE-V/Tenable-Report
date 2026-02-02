@@ -26,7 +26,9 @@ class HTMLReportGenerator:
         exploitable_vulns: List[Dict] = None,
         grouped_by_app: List = None,
         app_stats: Dict = None,
-        server_stats: Dict = None
+        server_stats: Dict = None,
+        grouped_by_team: List = None,
+        team_stats: Dict = None
     ):
         """Generate HTML report"""
         if not output_path:
@@ -44,7 +46,9 @@ class HTMLReportGenerator:
             exploitable_vulns=exploitable_vulns or [],
             grouped_by_app=grouped_by_app or [],
             app_stats=app_stats or {},
-            server_stats=server_stats or {}
+            server_stats=server_stats or {},
+            grouped_by_team=grouped_by_team or [],
+            team_stats=team_stats or {}
         )
         
         # Write to file

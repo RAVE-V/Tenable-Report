@@ -171,23 +171,50 @@ class ReportManager:
             
             exploitable_vulns = [v for v in vulns if v.get("exploit_available")]
             
-            # Enrich with Application Mappings
-            print("Enriching with application data...")
-            hostname_to_app = {}
+            # Enrich with Application Mappings (including team data)
+            print("Enriching with application and team data...")
+            hostname_to_app_info = {}
             with get_db_session() as session:
-                query = session.query(Server.hostname, Application.app_name)\
-                    .join(ServerApplicationMap, Server.server_id == ServerApplicationMap.server_id)\
-                    .join(Application, Application.app_id == ServerApplicationMap.app_id)
-                hostname_to_app = {h: a for h, a in query.all()}
+                query = session.query(
+                    Server.hostname, 
+                    Application.app_name, 
+                    Application.owner_team,
+                    Application.system_owner
+                ).join(
+                    ServerApplicationMap, Server.server_id == ServerApplicationMap.server_id
+                ).join(
+                    Application, Application.app_id == ServerApplicationMap.app_id
+                )
+                for hostname, app_name, owner_team, system_owner in query.all():
+                    hostname_to_app_info[hostname] = {
+                        "app_name": app_name,
+                        "owner_team": owner_team or "Unassigned Team",
+                        "system_owner": system_owner
+                    }
             
+            # Group by Application (existing)
             grouped_by_app = defaultdict(lambda: defaultdict(list))
+            # Group by Team -> App -> Server (new)
+            grouped_by_team = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+            
             for v in vulns:
                 hostname = v.get("hostname", "Unknown")
-                app_name = hostname_to_app.get(hostname, "Unassigned")
+                app_info = hostname_to_app_info.get(hostname, {
+                    "app_name": "Unassigned",
+                    "owner_team": "Unassigned Team",
+                    "system_owner": None
+                })
+                app_name = app_info["app_name"]
+                team = app_info["owner_team"]
+                
                 v["application"] = app_name
+                v["owner_team"] = team
+                
                 grouped_by_app[app_name][hostname].append(v)
+                grouped_by_team[team][app_name][hostname].append(v)
             
             sorted_apps = sorted(grouped_by_app.items(), key=lambda x: (x[0] == "Unassigned", x[0]))
+            sorted_teams = sorted(grouped_by_team.items(), key=lambda x: (x[0] == "Unassigned Team", x[0]))
             
             # Calculate Application Stats
             app_stats = {}
@@ -216,6 +243,22 @@ class ReportManager:
                     server_stats[hostname] = h_stats
                 app_stats[app_name] = stats
             
+            # Calculate Team Stats
+            team_stats = {}
+            for team_name, apps in grouped_by_team.items():
+                team_stats[team_name] = {
+                    "app_count": len(apps),
+                    "server_count": sum(len(servers) for servers in apps.values()),
+                    "critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0
+                }
+                for app_name, servers in apps.items():
+                    for hostname, host_vulns in servers.items():
+                        for v in host_vulns:
+                            team_stats[team_name]["total"] += 1
+                            sev = v.get("severity", "").lower()
+                            if sev in team_stats[team_name]:
+                                team_stats[team_name][sev] += 1
+            
             # Generate outputs
             output_dir = Path(output)
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -231,7 +274,8 @@ class ReportManager:
                 "total_assets": len(set(v["asset_uuid"] for v in vulns if v["asset_uuid"])),
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "severity_counts": dict(severity_counts),
-                "mapped_servers": sum(len(servers) for app, servers in grouped_by_app.items() if app != "Unassigned")
+                "mapped_servers": sum(len(servers) for app, servers in grouped_by_app.items() if app != "Unassigned"),
+                "total_teams": len([t for t in grouped_by_team.keys() if t != "Unassigned Team"])
             }
             
             if format in ["xlsx", "both"]:
@@ -254,7 +298,9 @@ class ReportManager:
                     exploitable_vulns=exploitable_vulns,
                     grouped_by_app=sorted_apps,
                     app_stats=app_stats,
-                    server_stats=server_stats
+                    server_stats=server_stats,
+                    grouped_by_team=sorted_teams,
+                    team_stats=team_stats
                 )
                 print(f"✓ HTML report saved: {html_path}")
                 

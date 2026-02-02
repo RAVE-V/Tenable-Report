@@ -624,6 +624,73 @@
             </div>
         </header>
 
+        <!-- Team Summary Section (NEW) -->
+        {% if grouped_by_team and grouped_by_team|length > 0 %}
+        <section id="team-summary" style="margin-bottom: 30px;">
+            <h2>👥 Team Summary</h2>
+            <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 16px;">
+                Vulnerability ownership grouped by team → application → server. Click to expand.
+            </p>
+            
+            {% for team_name, apps in grouped_by_team %}
+            {% set tstats = team_stats[team_name] %}
+            <details class="team-accordion" style="margin-bottom: 8px; border: 1px solid #374151; border-radius: 8px; overflow: hidden;">
+                <summary style="padding: 12px 16px; background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-weight: 600; color: #e5e7eb;">{{ team_name }}</span>
+                        <span class="pill" style="background: #065f46; font-size: 0.7rem;">{{ tstats.app_count }} Apps</span>
+                        <span class="pill" style="background: #1e40af; font-size: 0.7rem;">{{ tstats.server_count }} Servers</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        {% if tstats.critical > 0 %}<span class="pill critical" style="font-size: 0.7rem;">{{ tstats.critical }} Critical</span>{% endif %}
+                        {% if tstats.high > 0 %}<span class="pill high" style="font-size: 0.7rem;">{{ tstats.high }} High</span>{% endif %}
+                        <span class="pill" style="background: #374151; font-size: 0.7rem;">{{ tstats.total }} Total</span>
+                    </div>
+                </summary>
+                <div style="padding: 12px 16px; background: #111827;">
+                    {% for app_name, servers in apps.items() %}
+                    <details class="app-accordion" style="margin-bottom: 6px; border: 1px solid #1f2937; border-radius: 6px; overflow: hidden;">
+                        <summary style="padding: 10px 14px; background: #1f2937; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="color: #60a5fa;">📦 {{ app_name }}</span>
+                                <span style="color: #9ca3af; font-size: 0.8rem;">({{ servers|length }} servers)</span>
+                            </div>
+                        </summary>
+                        <div style="padding: 8px 14px; background: #0f172a;">
+                            <table style="width: 100%; font-size: 0.85rem;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid #374151;">
+                                        <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">Server</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #ef4444; width: 60px;">Crit</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #f97316; width: 60px;">High</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #eab308; width: 60px;">Med</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #22c55e; width: 60px;">Low</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #9ca3af; width: 60px;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for hostname, vulns in servers.items() %}
+                                    {% set srv_stats = server_stats.get(hostname, {}) %}
+                                    <tr style="border-bottom: 1px solid #1f2937;">
+                                        <td style="padding: 6px 8px; color: #d1d5db;">🖥️ {{ hostname }}</td>
+                                        <td style="text-align: center; padding: 6px 4px; color: {% if srv_stats.critical|default(0) > 0 %}#ef4444{% else %}#4b5563{% endif %}; font-weight: {% if srv_stats.critical|default(0) > 0 %}bold{% else %}normal{% endif %};">{{ srv_stats.critical|default(0) }}</td>
+                                        <td style="text-align: center; padding: 6px 4px; color: {% if srv_stats.high|default(0) > 0 %}#f97316{% else %}#4b5563{% endif %};">{{ srv_stats.high|default(0) }}</td>
+                                        <td style="text-align: center; padding: 6px 4px; color: {% if srv_stats.medium|default(0) > 0 %}#eab308{% else %}#4b5563{% endif %};">{{ srv_stats.medium|default(0) }}</td>
+                                        <td style="text-align: center; padding: 6px 4px; color: {% if srv_stats.low|default(0) > 0 %}#22c55e{% else %}#4b5563{% endif %};">{{ srv_stats.low|default(0) }}</td>
+                                        <td style="text-align: center; padding: 6px 4px; color: #9ca3af;">{{ srv_stats.total|default(vulns|length) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endfor %}
+        </section>
+        {% endif %}
+
         <!-- Application Summary Table -->
         <section id="app-summary" style="margin-bottom: 30px;">
             <h2>📊 Application Summary</h2>

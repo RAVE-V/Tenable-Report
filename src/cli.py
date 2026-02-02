@@ -24,6 +24,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def safe_echo(msg, err=False):
+    """Echo message with fallback for Windows encoding issues"""
+    # Map of common emoji to ASCII-safe alternatives
+    emoji_map = {
+        "✓": "[OK]", "✗": "[ERR]", "⚠️": "[WARN]", "⚠": "[WARN]",
+        "📋": "[EXPORT]", "📂": "[FILE]", "📊": "[STATS]", "📝": "[NOTE]",
+        "✨": "[*]", "💾": "[SAVE]", "⏱️": "[TIME]", "ℹ️": "[INFO]",
+        "↻": "[UPD]", "🔍": "[DRY]", "👥": "[TEAM]", "📦": "[APP]",
+        "🖥️": "[SRV]", "🛡️": "[SEC]"
+    }
+    try:
+        click.echo(msg, err=err)
+    except UnicodeEncodeError:
+        safe_msg = msg
+        for emoji, replacement in emoji_map.items():
+            safe_msg = safe_msg.replace(emoji, replacement)
+        click.echo(safe_msg, err=err)
+
+
+
 @click.group()
 @click.version_option(version="1.0.0")
 def cli():
@@ -282,23 +302,42 @@ def list_mappings(server, app):
 
 @cli.command("import-mappings")
 @click.argument("excel_file", type=click.Path(exists=True))
+@click.option("--type", "import_type", type=click.Choice(["servers", "apps"]), default="servers", help="Template type: servers (server-app mappings) or apps (application metadata)")
 @click.option("--dry-run", is_flag=True, help="Validate without saving to database")
-def import_mappings(excel_file, dry_run):
-    """Import server-to-application mappings from Excel file"""
+def import_mappings(excel_file, import_type, dry_run):
+    """Import mappings from Excel file
+    
+    Types:
+      servers - Server-to-application mappings (default)
+      apps    - Application metadata (name, type, owner_team, system_owner)
+    """
     try:
         from pathlib import Path
         from src.import_mappings import MappingImporter
         
-        click.echo(f"📂 Importing mappings from: {excel_file}\n")
         importer = MappingImporter()
-        stats = importer.import_from_excel(Path(excel_file), dry_run=dry_run)
         
-        click.echo("\n" + "="*60)
-        click.echo("📊 IMPORT SUMMARY")
-        click.echo("="*60)
-        click.echo(f"Total rows: {stats['total_rows']}")
-        click.echo(f"Mappings created: {stats['mappings_created']}")
-        click.echo(f"Mappings updated: {stats['mappings_updated']}")
+        if import_type == "apps":
+            click.echo(f"📂 Importing application metadata from: {excel_file}\n")
+            stats = importer.import_apps_from_excel(Path(excel_file), dry_run=dry_run)
+            
+            click.echo("\n" + "="*60)
+            click.echo("📊 IMPORT SUMMARY (Applications)")
+            click.echo("="*60)
+            click.echo(f"Total rows: {stats['total_rows']}")
+            click.echo(f"Applications created: {stats['apps_created']}")
+            click.echo(f"Applications updated: {stats['apps_updated']}")
+        else:
+            click.echo(f"📂 Importing server mappings from: {excel_file}\n")
+            stats = importer.import_from_excel(Path(excel_file), dry_run=dry_run)
+            
+            click.echo("\n" + "="*60)
+            click.echo("📊 IMPORT SUMMARY (Server Mappings)")
+            click.echo("="*60)
+            click.echo(f"Total rows: {stats['total_rows']}")
+            click.echo(f"Mappings created: {stats['mappings_created']}")
+            click.echo(f"Mappings updated: {stats['mappings_updated']}")
+        
         if stats['errors']:
             click.echo(f"\n⚠️  Errors: {len(stats['errors'])}")
         else:
@@ -309,22 +348,76 @@ def import_mappings(excel_file, dry_run):
         sys.exit(1)
 
 
-@cli.command("export-mapping-template")
+@cli.group("export-template")
+def export_template():
+    """Export Excel templates for mappings"""
+    pass
+
+
+@export_template.command("servers")
 @click.option("--output", type=click.Path(), default="./server_app_mapping_template.xlsx", help="Output file path")
-def export_mapping_template(output):
-    """Export an Excel template for server-application mappings"""
+@click.option("--servers-only", is_flag=True, help="Export only servers (device_type=server), exclude workstations/network devices")
+def export_servers_template(output, servers_only):
+    """Export server-to-application mapping template
+    
+    Exports all assets with columns: server_name, application_name, confidence, source
+    Use --servers-only to filter to only server device types.
+    """
     try:
         from pathlib import Path
         from src.import_mappings import MappingImporter
-        click.echo("📋 Exporting template...")
+        
+        safe_echo("[EXPORT] Exporting servers template...")
+        if servers_only:
+            safe_echo("  Filter: device_type = server only")
+        
+        importer = MappingImporter()
+        importer.export_template(Path(output), servers_only=servers_only)
+        safe_echo(f"\n[NOTE] Import with: python -m src.cli import-mappings {output}")
+    except Exception as e:
+        safe_echo(f"[ERR] Error: {e}", err=True)
+        sys.exit(1)
+
+
+@export_template.command("apps")
+@click.option("--output", type=click.Path(), default="./applications_template.xlsx", help="Output file path")
+def export_apps_template(output):
+    """Export applications catalog template
+    
+    Exports all applications with columns: application_name, app_type, description, system_owner, owner_team
+    Fill in system_owner and owner_team, then import with --type apps.
+    """
+    try:
+        from pathlib import Path
+        from src.import_mappings import MappingImporter
+        
+        safe_echo("[EXPORT] Exporting applications template...")
+        importer = MappingImporter()
+        importer.export_apps_template(Path(output))
+    except Exception as e:
+        safe_echo(f"[ERR] Error: {e}", err=True)
+        sys.exit(1)
+
+
+# Keep old command for backward compatibility (deprecated)
+@cli.command("export-mapping-template", hidden=True)
+@click.option("--output", type=click.Path(), default="./server_app_mapping_template.xlsx", help="Output file path")
+def export_mapping_template_legacy(output):
+    """[DEPRECATED] Use 'export-template servers' instead"""
+    try:
+        from pathlib import Path
+        from src.import_mappings import MappingImporter
+        safe_echo("[WARN] This command is deprecated. Use 'export-template servers' instead.\n")
+        safe_echo("[EXPORT] Exporting template...")
         importer = MappingImporter()
         importer.export_template(Path(output))
-        click.echo(f"\n✓ Template ready: {output}")
-        click.echo(f"   python -m src.cli import-mappings {output}")
+        safe_echo(f"\n[OK] Template ready: {output}")
+        safe_echo(f"   python -m src.cli import-mappings {output}")
     except Exception as e:
-        click.echo(f"✗ Error: {e}", err=True)
+        safe_echo(f"[ERR] Error: {e}", err=True)
         sys.exit(1)
 
 
 if __name__ == "__main__":
     cli()
+

@@ -9,6 +9,23 @@ from src.database.models import Server, Application, ServerApplicationMap, Confi
 from src.database.session import get_db_session
 
 
+def safe_echo(msg, err=False):
+    """Echo message with fallback for Windows encoding issues"""
+    emoji_map = {
+        "✓": "[OK]", "✗": "[ERR]", "⚠️": "[WARN]", "⚠": "[WARN]",
+        "📋": "[EXPORT]", "📂": "[FILE]", "📊": "[STATS]", "📝": "[NOTE]",
+        "✨": "[*]", "💾": "[SAVE]", "⏱️": "[TIME]", "ℹ️": "[INFO]",
+        "↻": "[UPD]", "🔍": "[DRY]"
+    }
+    try:
+        click.echo(msg, err=err)
+    except UnicodeEncodeError:
+        safe_msg = msg
+        for emoji, replacement in emoji_map.items():
+            safe_msg = safe_msg.replace(emoji, replacement)
+        click.echo(safe_msg, err=err)
+
+
 class MappingImporter:
     """Import server-application mappings from Excel files"""
     
@@ -74,10 +91,10 @@ class MappingImporter:
             skipped_rows = total_rows - len(df)
             
             if skipped_rows > 0:
-                click.echo(f"ℹ️  Skipping {skipped_rows} rows with no application name (unmapped)")
+                safe_echo(f"[INFO] Skipping {skipped_rows} rows with no application name (unmapped)")
                 
         if len(df) == 0:
-            click.echo("⚠️  No valid mappings found to import after filtering.")
+            safe_echo("[WARN] No valid mappings found to import after filtering.")
             return {
                 'total_rows': 0,
                 'servers_created': 0,
@@ -101,7 +118,7 @@ class MappingImporter:
         }
         
         if dry_run:
-            click.echo("🔍 DRY RUN - No changes will be saved to database")
+            safe_echo("[DRY] DRY RUN - No changes will be saved to database")
         
         with get_db_session() as session:
             for idx, row in df.iterrows():
@@ -120,7 +137,7 @@ class MappingImporter:
                         session.add(server)
                         session.flush()  # Get server_id
                         stats['servers_created'] += 1
-                        click.echo(f"  ✓ Created server: {server_name}")
+                        safe_echo(f"  [OK] Created server: {server_name}")
                     else:
                         stats['servers_found'] += 1
                     
@@ -133,7 +150,7 @@ class MappingImporter:
                         session.add(app)
                         session.flush()  # Get app_id
                         stats['apps_created'] += 1
-                        click.echo(f"  ✓ Created application: {app_name}")
+                        safe_echo(f"  [OK] Created application: {app_name}")
                     else:
                         stats['apps_found'] += 1
                     
@@ -164,7 +181,7 @@ class MappingImporter:
                         mapping.source = source
                         mapping.updated_by = updated_by
                         stats['mappings_updated'] += 1
-                        click.echo(f"  ↻ Updated mapping: {server_name} → {app_name}")
+                        safe_echo(f"  [UPD] Updated mapping: {server_name} -> {app_name}")
                     else:
                         # Create new mapping
                         mapping = ServerApplicationMap(
@@ -176,28 +193,29 @@ class MappingImporter:
                         )
                         session.add(mapping)
                         stats['mappings_created'] += 1
-                        click.echo(f"  ✓ Created mapping: {server_name} → {app_name}")
+                        safe_echo(f"  [OK] Created mapping: {server_name} -> {app_name}")
                 
                 except Exception as e:
                     error_msg = f"Row {idx + 2}: {str(e)}"
                     stats['errors'].append(error_msg)
-                    click.echo(f"  ✗ Error on row {idx + 2}: {e}", err=True)
+                    safe_echo(f"  [ERR] Error on row {idx + 2}: {e}", err=True)
             
             if not dry_run:
                 session.commit()
-                click.echo("\n✓ Changes committed to database")
+                safe_echo("\n[OK] Changes committed to database")
             else:
                 session.rollback()  # Explicitly rollback for dry run to override context manager commit
-                click.echo("\n🔍 DRY RUN - No changes saved")
+                safe_echo("\n[DRY] DRY RUN - No changes saved")
         
         return stats
     
-    def export_template(self, output_path: Path, include_existing: bool = True):
+    def export_template(self, output_path: Path, include_existing: bool = True, servers_only: bool = False):
         """Export an Excel template with actual servers and existing mappings
         
         Args:
             output_path: Path for output Excel file
             include_existing: If True, include existing mappings from database
+            servers_only: If True, only include assets with device_type='server'
         """
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -244,16 +262,24 @@ class MappingImporter:
             from src.database.models import Vulnerability
             
             # Get distinct assets from Vulnerability table
-            vuln_assets = session.query(
+            vuln_query = session.query(
                 Vulnerability.asset_uuid, 
-                Vulnerability.hostname
-            ).distinct().all()
+                Vulnerability.hostname,
+                Vulnerability.device_type
+            ).distinct()
+            
+            # Filter by device_type if servers_only is True
+            if servers_only:
+                vuln_query = vuln_query.filter(Vulnerability.device_type == 'server')
+                safe_echo("  Filter: device_type = server")
+            
+            vuln_assets = vuln_query.all()
             
             # Create set of existing server hostnames/uuids for fast lookup
             existing_hostnames = {s['server_name'] for s in servers_data if s['server_name']}
             
             new_assets_count = 0
-            for v_asset_uuid, v_hostname in vuln_assets:
+            for v_asset_uuid, v_hostname, v_device_type in vuln_assets:
                 # Determine primary identifier (hostname preferred)
                 identifier = v_hostname if v_hostname else v_asset_uuid
                 
@@ -270,7 +296,7 @@ class MappingImporter:
                     new_assets_count += 1
             
             if new_assets_count > 0:
-                click.echo(f"  Start: Added {new_assets_count} unmapped assets from recent scan")
+                safe_echo(f"  [OK] Added {new_assets_count} unmapped assets from recent scan")
 
         
         # If no servers in DB, create example template
@@ -291,7 +317,7 @@ class MappingImporter:
                     'updated_by': ''
                 }
             ]
-            click.echo("ℹ️  No servers in database. Creating example template.")
+            safe_echo("[INFO] No servers in database. Creating example template.")
         
         # Create DataFrame
         df = pd.DataFrame(servers_data)
@@ -342,9 +368,221 @@ class MappingImporter:
         mapped = len(df[df['application_name'] != ''])
         unmapped = total - mapped
         
-        click.echo(f"✓ Template exported to: {output_path}")
-        click.echo(f"   Total servers: {total}")
-        click.echo(f"   Already mapped: {mapped} (existing mappings preserved)")
-        click.echo(f"   Needs mapping: {unmapped} (highlighted in yellow)")
-        click.echo(f"\n📝 Fill in the 'application_name' column for highlighted rows, then import:")
-        click.echo(f"   python -m src.cli import-mappings {output_path}")
+        safe_echo(f"[OK] Template exported to: {output_path}")
+        safe_echo(f"   Total servers: {total}")
+        safe_echo(f"   Already mapped: {mapped} (existing mappings preserved)")
+        safe_echo(f"   Needs mapping: {unmapped} (highlighted in yellow)")
+        safe_echo(f"\n[NOTE] Fill in the 'application_name' column for highlighted rows, then import:")
+        safe_echo(f"   python -m src.cli import-mappings {output_path}")
+
+    def export_apps_template(self, output_path: Path):
+        """Export an Excel template for managing applications catalog
+        
+        Args:
+            output_path: Path for output Excel file
+        """
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        
+        apps_data = []
+        
+        with get_db_session() as session:
+            # Get all applications from database
+            apps = session.query(Application).all()
+            
+            for app in apps:
+                apps_data.append({
+                    'application_name': app.app_name,
+                    'app_type': app.app_type or '',
+                    'description': app.description or '',
+                    'system_owner': app.system_owner or '',
+                    'owner_team': app.owner_team or ''
+                })
+            
+            # Also get unique app names from mappings that might not be in apps table
+            from src.database.models import ServerApplicationMap
+            mapped_app_ids = session.query(ServerApplicationMap.app_id).distinct().all()
+            existing_app_names = {a['application_name'] for a in apps_data}
+            
+            for (app_id,) in mapped_app_ids:
+                app = session.query(Application).filter_by(app_id=app_id).first()
+                if app and app.app_name not in existing_app_names:
+                    apps_data.append({
+                        'application_name': app.app_name,
+                        'app_type': app.app_type or '',
+                        'description': app.description or '',
+                        'system_owner': app.system_owner or '',
+                        'owner_team': app.owner_team or ''
+                    })
+        
+        # If no apps in DB, create example template
+        if not apps_data:
+            apps_data = [
+                {
+                    'application_name': 'Example Application',
+                    'app_type': 'Web Application',
+                    'description': 'Customer-facing web portal',
+                    'system_owner': 'john.doe@company.com',
+                    'owner_team': 'Platform Team'
+                },
+                {
+                    'application_name': 'Payment Gateway',
+                    'app_type': 'Backend Service',
+                    'description': '',
+                    'system_owner': '',
+                    'owner_team': ''
+                }
+            ]
+            safe_echo("[INFO] No applications in database. Creating example template.")
+        
+        # Create DataFrame
+        df = pd.DataFrame(apps_data)
+        
+        # Sort by app name
+        df = df.sort_values('application_name')
+        
+        # Write to Excel with formatting
+        with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Applications')
+            
+            # Access the worksheet to add formatting
+            ws = writer.sheets['Applications']
+            
+            # Style header row
+            header_fill = PatternFill(start_color='1E3A8A', end_color='1E3A8A', fill_type='solid')
+            header_font = Font(color='FFFFFF', bold=True)
+            
+            for cell in ws[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Highlight rows without owner_team (to be filled)
+            highlight_fill = PatternFill(start_color='FEF3C7', end_color='FEF3C7', fill_type='solid')
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_row=ws.max_row), start=2):
+                # Column E is owner_team (index 4)
+                if not row[4].value:  # No owner_team
+                    for cell in row:
+                        cell.fill = highlight_fill
+            
+            # Auto-adjust column widths
+            for column in ws.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                ws.column_dimensions[column_letter].width = min(max_length + 2, 50)
+        
+        # Count stats
+        total = len(df)
+        with_team = len(df[df['owner_team'] != ''])
+        needs_team = total - with_team
+        
+        safe_echo(f"[OK] Applications template exported to: {output_path}")
+        safe_echo(f"   Total applications: {total}")
+        safe_echo(f"   With owner_team: {with_team}")
+        safe_echo(f"   Needs owner_team: {needs_team} (highlighted in yellow)")
+        safe_echo(f"\n[NOTE] Fill in 'system_owner' and 'owner_team' columns, then import:")
+        safe_echo(f"   python -m src.cli import-mappings {output_path} --type apps")
+
+    def import_apps_from_excel(self, excel_path: Path, dry_run: bool = False) -> Dict:
+        """
+        Import application metadata from Excel file
+        
+        Args:
+            excel_path: Path to Excel file
+            dry_run: If True, validate but don't save to database
+            
+        Returns:
+            Dict with import statistics
+        """
+        # Read Excel
+        try:
+            df = pd.read_excel(excel_path)
+        except Exception as e:
+            raise ValueError(f"Failed to read Excel file: {e}")
+        
+        # Validate required column
+        if 'application_name' not in df.columns:
+            raise ValueError("Excel must contain 'application_name' column")
+        
+        # Filter out rows with empty application_name
+        df['application_name'] = df['application_name'].fillna('').astype(str).str.strip()
+        df = df[df['application_name'] != '']
+        
+        if len(df) == 0:
+            safe_echo("[WARN] No valid applications found to import.")
+            return {
+                'total_rows': 0,
+                'apps_created': 0,
+                'apps_updated': 0,
+                'errors': []
+            }
+        
+        stats = {
+            'total_rows': len(df),
+            'apps_created': 0,
+            'apps_updated': 0,
+            'errors': []
+        }
+        
+        if dry_run:
+            safe_echo("[DRY] DRY RUN - No changes will be saved to database")
+        
+        with get_db_session() as session:
+            for idx, row in df.iterrows():
+                try:
+                    app_name = str(row['application_name']).strip()
+                    
+                    # Get optional fields
+                    app_type = str(row.get('app_type', '')).strip() if pd.notna(row.get('app_type')) else None
+                    description = str(row.get('description', '')).strip() if pd.notna(row.get('description')) else None
+                    system_owner = str(row.get('system_owner', '')).strip() if pd.notna(row.get('system_owner')) else None
+                    owner_team = str(row.get('owner_team', '')).strip() if pd.notna(row.get('owner_team')) else None
+                    
+                    # Find existing application (case-insensitive)
+                    app = session.query(Application).filter(Application.app_name.ilike(app_name)).first()
+                    
+                    if app:
+                        # Update existing application
+                        if app_type:
+                            app.app_type = app_type
+                        if description:
+                            app.description = description
+                        if system_owner:
+                            app.system_owner = system_owner
+                        if owner_team:
+                            app.owner_team = owner_team
+                        stats['apps_updated'] += 1
+                        safe_echo(f"  [UPD] Updated: {app_name}")
+                    else:
+                        # Create new application
+                        app = Application(
+                            app_name=app_name,
+                            app_type=app_type,
+                            description=description,
+                            system_owner=system_owner,
+                            owner_team=owner_team
+                        )
+                        session.add(app)
+                        stats['apps_created'] += 1
+                        safe_echo(f"  [OK] Created: {app_name}")
+                
+                except Exception as e:
+                    error_msg = f"Row {idx + 2}: {str(e)}"
+                    stats['errors'].append(error_msg)
+                    safe_echo(f"  [ERR] Error on row {idx + 2}: {e}", err=True)
+            
+            if not dry_run:
+                session.commit()
+                safe_echo("\n[OK] Changes committed to database")
+            else:
+                session.rollback()
+                safe_echo("\n[DRY] DRY RUN - No changes saved")
+        
+        return stats
+

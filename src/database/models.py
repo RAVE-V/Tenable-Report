@@ -47,6 +47,7 @@ class Application(Base):
     app_type = Column(String(100))
     description = Column(Text)
     owner_team = Column(String(255))
+    system_owner = Column(String(255))  # Individual owner name/email
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
