@@ -152,7 +152,7 @@
         }
 
         .stat-value.medium {
-            color: #facc15;
+            color: #eab308;
         }
 
         .stat-value.low {
@@ -254,7 +254,7 @@
 
         .sev-medium,
         .severity-medium {
-            background: #facc15;
+            background: #eab308;
             color: #0b1220;
         }
 
@@ -411,7 +411,7 @@
         }
 
         .vuln-card.medium {
-            border-left-color: #facc15;
+            border-left-color: #eab308;
         }
 
         .vuln-card.low {
@@ -729,7 +729,7 @@
                                             Crit</th>
                                         <th style="text-align: center; padding: 6px 4px; color: #f97316; width: 50px;">
                                             High</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #facc15; width: 50px;">
+                                        <th style="text-align: center; padding: 6px 4px; color: #eab308; width: 50px;">
                                             Med</th>
                                         <th style="text-align: center; padding: 6px 4px; color: #22c55e; width: 50px;">
                                             Low</th>
@@ -754,7 +754,7 @@
                                             style="text-align: center; padding: 6px 4px; color: {% if srv_stats.high|default(0) > 0 %}#f97316{% else %}#4b5563{% endif %};">
                                             {{ srv_stats.high|default(0) }}</td>
                                         <td
-                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.medium|default(0) > 0 %}#facc15{% else %}#4b5563{% endif %};">
+                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.medium|default(0) > 0 %}#eab308{% else %}#4b5563{% endif %};">
                                             {{ srv_stats.medium|default(0) }}</td>
                                         <td
                                             style="text-align: center; padding: 6px 4px; color: {% if srv_stats.low|default(0) > 0 %}#22c55e{% else %}#4b5563{% endif %};">
@@ -783,6 +783,8 @@
                         <tr>
                             <th>Application</th>
                             <th>Servers</th>
+                            <th>Owner Team</th>
+                            <th>System Owner</th>
                             <th>Critical</th>
                             <th>High</th>
                             <th>Medium</th>
@@ -796,6 +798,8 @@
                         <tr>
                             <td style="font-weight: 600;">{{ app_name }}</td>
                             <td>{{ stats.server_count }}</td>
+                            <td style="color: #9ca3af; font-size: 0.9em;">{{ stats.owner_team }}</td>
+                            <td style="color: #9ca3af; font-size: 0.9em;">{{ stats.system_owner }}</td>
                             <td
                                 style="color: {% if stats.critical > 0 %}#ef4444{% else %}#4b5563{% endif %}; font-weight: {% if stats.critical > 0 %}bold{% else %}normal{% endif %};">
                                 {{ stats.critical }}</td>
@@ -803,7 +807,7 @@
                                 style="color: {% if stats.high > 0 %}#f97316{% else %}#4b5563{% endif %}; font-weight: {% if stats.high > 0 %}bold{% else %}normal{% endif %};">
                                 {{ stats.high }}</td>
                             <td
-                                style="color: {% if stats.medium > 0 %}#facc15{% else %}#4b5563{% endif %}; font-weight: {% if stats.medium > 0 %}bold{% else %}normal{% endif %};">
+                                style="color: {% if stats.medium > 0 %}#eab308{% else %}#4b5563{% endif %}; font-weight: {% if stats.medium > 0 %}bold{% else %}normal{% endif %};">
                                 {{ stats.medium }}</td>
                             <td style="color: {% if stats.low > 0 %}#22c55e{% else %}#4b5563{% endif %};">{{ stats.low
                                 }}</td>

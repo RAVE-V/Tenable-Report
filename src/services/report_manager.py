@@ -221,8 +221,14 @@ class ReportManager:
             server_stats = {} 
             
             for app_name, servers in grouped_by_app.items():
+                # Get app info from first server
+                first_hostname = list(servers.keys())[0] if servers else None
+                first_info = hostname_to_app_info.get(first_hostname, {}) if first_hostname else {}
+
                 stats = {
                     "server_count": len(servers),
+                    "owner_team": first_info.get("owner_team", "Unassigned Team"),
+                    "system_owner": first_info.get("system_owner", "Unknown"),
                     "critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0
                 }
                 for hostname, host_vulns in servers.items():
