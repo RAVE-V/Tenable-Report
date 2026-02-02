@@ -624,36 +624,69 @@
             </div>
         </header>
 
-        <!-- Team Summary Section (NEW) -->
+        <!-- Team Summary Section (ENHANCED) -->
         {% if grouped_by_team and grouped_by_team|length > 0 %}
         <section id="team-summary" style="margin-bottom: 30px;">
             <h2>👥 Team Summary</h2>
             <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 16px;">
                 Vulnerability ownership grouped by team → application → server. Click to expand.
             </p>
-            
+
             {% for team_name, apps in grouped_by_team %}
             {% set tstats = team_stats[team_name] %}
-            <details class="team-accordion" style="margin-bottom: 8px; border: 1px solid #374151; border-radius: 8px; overflow: hidden;">
-                <summary style="padding: 12px 16px; background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span style="font-weight: 600; color: #e5e7eb;">{{ team_name }}</span>
-                        <span class="pill" style="background: #065f46; font-size: 0.7rem;">{{ tstats.app_count }} Apps</span>
-                        <span class="pill" style="background: #1e40af; font-size: 0.7rem;">{{ tstats.server_count }} Servers</span>
-                    </div>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        {% if tstats.critical > 0 %}<span class="pill critical" style="font-size: 0.7rem;">{{ tstats.critical }} Critical</span>{% endif %}
-                        {% if tstats.high > 0 %}<span class="pill high" style="font-size: 0.7rem;">{{ tstats.high }} High</span>{% endif %}
-                        <span class="pill" style="background: #374151; font-size: 0.7rem;">{{ tstats.total }} Total</span>
+            {% set t_app_stats = team_app_stats.get(team_name, {}) %}
+            <details class="team-accordion"
+                style="margin-bottom: 8px; border: 1px solid #374151; border-radius: 8px; overflow: hidden;">
+                <summary
+                    style="padding: 12px 16px; background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%); cursor: pointer;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span style="font-weight: 600; color: #e5e7eb; font-size: 1.05rem;">{{ team_name }}</span>
+                            {% if tstats.team_owner %}
+                            <span style="color: #9ca3af; font-size: 0.8rem;">👤 {{ tstats.team_owner }}</span>
+                            {% endif %}
+                            <span class="pill" style="background: #065f46; font-size: 0.7rem;">{{ tstats.app_count }}
+                                Apps</span>
+                            <span class="pill" style="background: #1e40af; font-size: 0.7rem;">{{ tstats.server_count }}
+                                Servers</span>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            <span class="pill critical" style="font-size: 0.7rem;">{{ tstats.critical }} Crit</span>
+                            <span class="pill high" style="font-size: 0.7rem;">{{ tstats.high }} High</span>
+                            <span class="pill medium" style="font-size: 0.7rem;">{{ tstats.medium }} Med</span>
+                            <span class="pill low" style="font-size: 0.7rem;">{{ tstats.low }} Low</span>
+                            <span class="pill" style="background: #374151; font-size: 0.7rem;">{{ tstats.total }}
+                                Total</span>
+                        </div>
                     </div>
                 </summary>
                 <div style="padding: 12px 16px; background: #111827;">
                     {% for app_name, servers in apps.items() %}
-                    <details class="app-accordion" style="margin-bottom: 6px; border: 1px solid #1f2937; border-radius: 6px; overflow: hidden;">
-                        <summary style="padding: 10px 14px; background: #1f2937; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span style="color: #60a5fa;">📦 {{ app_name }}</span>
-                                <span style="color: #9ca3af; font-size: 0.8rem;">({{ servers|length }} servers)</span>
+                    {% set a_stats = t_app_stats.get(app_name, {}) %}
+                    <details class="app-accordion"
+                        style="margin-bottom: 6px; border: 1px solid #1f2937; border-radius: 6px; overflow: hidden;">
+                        <summary style="padding: 10px 14px; background: #1f2937; cursor: pointer;">
+                            <div
+                                style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="color: #60a5fa;">📦 {{ app_name }}</span>
+                                    <span style="color: #9ca3af; font-size: 0.8rem;">({{ servers|length }}
+                                        servers)</span>
+                                </div>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span class="pill critical" style="font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.critical|default(0) }}</span>
+                                    <span class="pill high" style="font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.high|default(0) }}</span>
+                                    <span class="pill medium" style="font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.medium|default(0) }}</span>
+                                    <span class="pill low" style="font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.low|default(0) }}</span>
+                                    <span class="pill"
+                                        style="background: #374151; font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.total|default(0) }}</span>
+                                </div>
                             </div>
                         </summary>
                         <div style="padding: 8px 14px; background: #0f172a;">
@@ -661,11 +694,18 @@
                                 <thead>
                                     <tr style="border-bottom: 1px solid #374151;">
                                         <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">Server</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #ef4444; width: 60px;">Crit</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #f97316; width: 60px;">High</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #eab308; width: 60px;">Med</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #22c55e; width: 60px;">Low</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #9ca3af; width: 60px;">Total</th>
+                                        <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">IP</th>
+                                        <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">OS</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #ef4444; width: 50px;">
+                                            Crit</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #f97316; width: 50px;">
+                                            High</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #eab308; width: 50px;">
+                                            Med</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #22c55e; width: 50px;">
+                                            Low</th>
+                                        <th style="text-align: center; padding: 6px 4px; color: #9ca3af; width: 50px;">
+                                            Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -673,11 +713,25 @@
                                     {% set srv_stats = server_stats.get(hostname, {}) %}
                                     <tr style="border-bottom: 1px solid #1f2937;">
                                         <td style="padding: 6px 8px; color: #d1d5db;">🖥️ {{ hostname }}</td>
-                                        <td style="text-align: center; padding: 6px 4px; color: {% if srv_stats.critical|default(0) > 0 %}#ef4444{% else %}#4b5563{% endif %}; font-weight: {% if srv_stats.critical|default(0) > 0 %}bold{% else %}normal{% endif %};">{{ srv_stats.critical|default(0) }}</td>
-                                        <td style="text-align: center; padding: 6px 4px; color: {% if srv_stats.high|default(0) > 0 %}#f97316{% else %}#4b5563{% endif %};">{{ srv_stats.high|default(0) }}</td>
-                                        <td style="text-align: center; padding: 6px 4px; color: {% if srv_stats.medium|default(0) > 0 %}#eab308{% else %}#4b5563{% endif %};">{{ srv_stats.medium|default(0) }}</td>
-                                        <td style="text-align: center; padding: 6px 4px; color: {% if srv_stats.low|default(0) > 0 %}#22c55e{% else %}#4b5563{% endif %};">{{ srv_stats.low|default(0) }}</td>
-                                        <td style="text-align: center; padding: 6px 4px; color: #9ca3af;">{{ srv_stats.total|default(vulns|length) }}</td>
+                                        <td style="padding: 6px 8px; color: #9ca3af; font-size: 0.8rem;">{{
+                                            srv_stats.ipv4|default('N/A') }}</td>
+                                        <td style="padding: 6px 8px; color: #9ca3af; font-size: 0.75rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                            title="{{ srv_stats.os|default('Unknown') }}">{{
+                                            srv_stats.os|default('Unknown') }}</td>
+                                        <td
+                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.critical|default(0) > 0 %}#ef4444{% else %}#4b5563{% endif %}; font-weight: {% if srv_stats.critical|default(0) > 0 %}bold{% else %}normal{% endif %};">
+                                            {{ srv_stats.critical|default(0) }}</td>
+                                        <td
+                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.high|default(0) > 0 %}#f97316{% else %}#4b5563{% endif %};">
+                                            {{ srv_stats.high|default(0) }}</td>
+                                        <td
+                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.medium|default(0) > 0 %}#eab308{% else %}#4b5563{% endif %};">
+                                            {{ srv_stats.medium|default(0) }}</td>
+                                        <td
+                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.low|default(0) > 0 %}#22c55e{% else %}#4b5563{% endif %};">
+                                            {{ srv_stats.low|default(0) }}</td>
+                                        <td style="text-align: center; padding: 6px 4px; color: #9ca3af;">{{
+                                            srv_stats.total|default(vulns|length) }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -730,6 +784,43 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Unassigned Applications (no servers mapped) -->
+            {% if unassigned_apps and unassigned_apps|length > 0 %}
+            <details style="margin-top: 16px; border: 1px solid #374151; border-radius: 8px; overflow: hidden;">
+                <summary
+                    style="padding: 12px 16px; background: #1f2937; cursor: pointer; display: flex; align-items: center; gap: 12px;">
+                    <span style="color: #9ca3af;">📋 Applications Without Servers</span>
+                    <span class="pill" style="background: #6b7280; font-size: 0.7rem;">{{ unassigned_apps|length
+                        }}</span>
+                </summary>
+                <div style="padding: 12px 16px; background: #111827;">
+                    <p style="color: #6b7280; font-size: 0.8rem; margin-bottom: 12px;">
+                        These applications are in the catalog but have no servers currently mapped.
+                    </p>
+                    <table style="width: 100%; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #374151;">
+                                <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">Application</th>
+                                <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">Type</th>
+                                <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">Owner Team</th>
+                                <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">System Owner</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in unassigned_apps %}
+                            <tr style="border-bottom: 1px solid #1f2937;">
+                                <td style="padding: 6px 8px; color: #d1d5db;">📦 {{ app.app_name }}</td>
+                                <td style="padding: 6px 8px; color: #9ca3af;">{{ app.app_type }}</td>
+                                <td style="padding: 6px 8px; color: #9ca3af;">{{ app.owner_team }}</td>
+                                <td style="padding: 6px 8px; color: #9ca3af;">{{ app.system_owner }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+            {% endif %}
         </section>
 
         <!-- Quick Wins Section with Expandable Device Lists -->

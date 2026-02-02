@@ -76,7 +76,7 @@ class ReportManager:
             
             # === Database Mode (--from-db) ===
             if from_db:
-                print("\n⚡ Using pre-processed data from database...")
+                print("\n[DB] Using pre-processed data from database...")
                 
                 with get_db_session() as session:
                     query = session.query(Vulnerability)
@@ -97,16 +97,16 @@ class ReportManager:
                     db_vulns = query.all()
                     
                     if not db_vulns:
-                        print("✗ No vulnerabilities found in database matching filters")
+                        print("[ERR] No vulnerabilities found in database matching filters")
                         print("  Tip: Run 'sync-all' first to populate the database")
                         sys.exit(0)
                     
                     # Convert to dict format
                     vulns = [v.to_dict() for v in db_vulns]
-                    print(f"✓ Loaded {len(vulns)} vulnerabilities from database")
+                    print(f"[OK] Loaded {len(vulns)} vulnerabilities from database")
                     
                     elapsed = time.time() - start_time
-                    print(f"  ⏱️  Data load time: {elapsed:.2f}s")
+                    print(f"  [TIME] Data load time: {elapsed:.2f}s")
             
             # === Normal Mode (API/Cache) ===
             else:
@@ -117,26 +117,26 @@ class ReportManager:
                 if not fresh:
                     cache_info = cache.get_info(filters)
                     if cache_info:
-                        print(f"\n💾 Cached data found (Age: {cache_info['age_hours']:.1f} hours)")
+                        print(f"\n[CACHE] Cached data found (Age: {cache_info['age_hours']:.1f} hours)")
                         if use_cache or (not cache_info['is_stale']): # Simplified non-interactive check for lib use
                             cached_data = cache.get(filters)
                             if cached_data:
                                 raw_vulns = cached_data['vulnerabilities']
                                 used_cache = True
-                                print("✓ Using cached data")
+                                print("[OK] Using cached data")
                 
                 if raw_vulns is None:
                     print("Fetching vulnerabilities from Tenable...")
                     client = TenableExporter()
                     raw_vulns = client.export_vulnerabilities(filters)
-                    print("💾 Caching vulnerability data for future use...")
+                    print("[CACHE] Caching vulnerability data for future use...")
                     cache.set(filters, raw_vulns)
                 
                 if not raw_vulns:
-                    print("✗ No vulnerabilities found matching filters")
+                    print("[ERR] No vulnerabilities found matching filters")
                     sys.exit(0)
                 
-                print(f"✓ {'Using' if used_cache else 'Fetched'} {len(raw_vulns)} vulnerabilities")
+                print(f"[OK] {'Using' if used_cache else 'Fetched'} {len(raw_vulns)} vulnerabilities")
                 print("Normalizing vulnerability data...")
                 vulns = VulnerabilityNormalizer.normalize_batch(raw_vulns)
                 
@@ -150,7 +150,7 @@ class ReportManager:
                     vulns = [v for v in vulns if v.get('state', '').upper() in state_list]
             
             if not vulns:
-                print("✗ No vulnerabilities found matching filters")
+                print("[ERR] No vulnerabilities found matching filters")
                 sys.exit(0)
             
             # Determine Vendor/Product (if not from DB)
@@ -243,21 +243,59 @@ class ReportManager:
                     server_stats[hostname] = h_stats
                 app_stats[app_name] = stats
             
-            # Calculate Team Stats
+            # Calculate Team Stats (with team owner and app-level stats)
             team_stats = {}
+            team_app_stats = {}  # {team: {app: {critical, high, etc.}}}
+            
             for team_name, apps in grouped_by_team.items():
+                # Find system_owner for this team (from first app that has one)
+                team_owner = None
+                for app_name, servers in apps.items():
+                    for hostname, host_vulns in servers.items():
+                        info = hostname_to_app_info.get(hostname, {})
+                        if info.get("system_owner"):
+                            team_owner = info["system_owner"]
+                            break
+                    if team_owner:
+                        break
+                
                 team_stats[team_name] = {
                     "app_count": len(apps),
                     "server_count": sum(len(servers) for servers in apps.values()),
+                    "team_owner": team_owner,
                     "critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0
                 }
+                team_app_stats[team_name] = {}
+                
                 for app_name, servers in apps.items():
+                    app_sev = {"server_count": len(servers), "critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0}
                     for hostname, host_vulns in servers.items():
                         for v in host_vulns:
                             team_stats[team_name]["total"] += 1
+                            app_sev["total"] += 1
                             sev = v.get("severity", "").lower()
                             if sev in team_stats[team_name]:
                                 team_stats[team_name][sev] += 1
+                            if sev in app_sev:
+                                app_sev[sev] += 1
+                    team_app_stats[team_name][app_name] = app_sev
+            
+            # Fetch unassigned applications (apps in DB with no server mappings)
+            unassigned_apps = []
+            with get_db_session() as session:
+                from sqlalchemy import not_, exists
+                from sqlalchemy.orm import aliased
+                # Get apps that have no entry in ServerApplicationMap
+                all_apps = session.query(Application).all()
+                for app in all_apps:
+                    has_mapping = session.query(ServerApplicationMap).filter_by(app_id=app.app_id).first()
+                    if not has_mapping:
+                        unassigned_apps.append({
+                            "app_name": app.app_name,
+                            "app_type": app.app_type or "Unknown",
+                            "owner_team": app.owner_team or "Unassigned Team",
+                            "system_owner": app.system_owner or "Unknown"
+                        })
             
             # Generate outputs
             output_dir = Path(output)
@@ -283,7 +321,7 @@ class ReportManager:
                 print(f"Generating XLSX report: {xlsx_path}")
                 xlsx_gen = XLSXReportGenerator()
                 xlsx_gen.generate(vulns, xlsx_path, metadata)
-                print(f"✓ XLSX report saved: {xlsx_path}")
+                print(f"[OK] XLSX report saved: {xlsx_path}")
             
             if format in ["html", "both"]:
                 html_path = output_dir / f"Tenable_Report{tag_suffix}{severity_suffix}_{timestamp}.html"
@@ -300,17 +338,19 @@ class ReportManager:
                     app_stats=app_stats,
                     server_stats=server_stats,
                     grouped_by_team=sorted_teams,
-                    team_stats=team_stats
+                    team_stats=team_stats,
+                    team_app_stats=team_app_stats,
+                    unassigned_apps=unassigned_apps
                 )
-                print(f"✓ HTML report saved: {html_path}")
+                print(f"[OK] HTML report saved: {html_path}")
                 
-            print("✓ Report generation complete")
+            print("[OK] Report generation complete")
 
         except TenableAPIError as e:
-            print(f"✗ Tenable API error: {e}", file=sys.stderr)
+            print(f"[ERR] Tenable API error: {e}", file=sys.stderr)
             sys.exit(1)
         except Exception as e:
-            print(f"✗ Error: {e}", file=sys.stderr)
+            print(f"[ERR] Error: {e}", file=sys.stderr)
             logger.exception("generate-report failed")
             sys.exit(1)
 

@@ -28,7 +28,9 @@ class HTMLReportGenerator:
         app_stats: Dict = None,
         server_stats: Dict = None,
         grouped_by_team: List = None,
-        team_stats: Dict = None
+        team_stats: Dict = None,
+        team_app_stats: Dict = None,
+        unassigned_apps: List = None
     ):
         """Generate HTML report"""
         if not output_path:
@@ -48,7 +50,9 @@ class HTMLReportGenerator:
             app_stats=app_stats or {},
             server_stats=server_stats or {},
             grouped_by_team=grouped_by_team or [],
-            team_stats=team_stats or {}
+            team_stats=team_stats or {},
+            team_app_stats=team_app_stats or {},
+            unassigned_apps=unassigned_apps or []
         )
         
         # Write to file
