@@ -219,10 +219,11 @@ def inspect_data(fresh):
 @click.option("--fresh", is_flag=True, help="Force fresh download from Tenable API")
 @click.option("--use-cache", is_flag=True, help="Use cached data if available")
 @click.option("--from-db", is_flag=True, help="Use pre-processed data from database")
-@click.option("--focus", help="Comma-separated list of device names or application names to focus on")
-def generate_report(tag, severity, state, format, output, servers_only, fresh, use_cache, from_db, focus):
+@click.option("--focus-servers", help="Comma-separated list of server names to focus on")
+@click.option("--focus-app", help="Comma-separated list of application names to focus on")
+def generate_report(tag, severity, state, format, output, servers_only, fresh, use_cache, from_db, focus_servers, focus_app):
     """Generate vulnerability report"""
-    ReportManager.generate_report(tag, severity, state, format, output, servers_only, fresh, use_cache, from_db, focus)
+    ReportManager.generate_report(tag, severity, state, format, output, servers_only, fresh, use_cache, from_db, focus_servers, focus_app)
 
 
 @cli.command()
