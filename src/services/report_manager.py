@@ -198,6 +198,10 @@ class ReportManager:
             # Group by Team -> App -> Server (new)
             grouped_by_team = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
             
+            # Focused servers
+            focus_list = [f.strip().lower() for f in focus.split(",")] if focus else []
+            focused_grouped_by_team = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+            
             for v in vulns:
                 hostname = (v.get("hostname") or "unknown").lower()
                 app_info = hostname_to_app_info.get(hostname, {
@@ -213,9 +217,13 @@ class ReportManager:
                 
                 grouped_by_app[app_name][hostname].append(v)
                 grouped_by_team[team][app_name][hostname].append(v)
+                
+                if hostname in focus_list:
+                    focused_grouped_by_team[team][app_name][hostname].append(v)
             
             sorted_apps = sorted(grouped_by_app.items(), key=lambda x: (x[0] == "Unassigned", x[0]))
             sorted_teams = sorted(grouped_by_team.items(), key=lambda x: (x[0] == "Unassigned Team", x[0]))
+            sorted_focused_teams = sorted(focused_grouped_by_team.items(), key=lambda x: (x[0] == "Unassigned Team", x[0]))
             
             # Calculate Application Stats
             app_stats = {}
@@ -258,62 +266,67 @@ class ReportManager:
                 app_stats[app_name] = stats
             
             # Build "Servers in Focus" — top 10 most critical servers
+            # Clear if specific focus is provided to avoid confusion
             servers_in_focus = []
-            for hostname, h_stats in server_stats.items():
-                if h_stats.get("critical", 0) > 0 or h_stats.get("high", 0) > 0:
-                    servers_in_focus.append({
-                        "hostname": hostname,
-                        "ipv4": h_stats.get("ipv4", "N/A"),
-                        "os": h_stats.get("os", "Unknown"),
-                        "critical": h_stats.get("critical", 0),
-                        "high": h_stats.get("high", 0),
-                        "medium": h_stats.get("medium", 0),
-                        "low": h_stats.get("low", 0),
-                        "total": h_stats.get("total", 0),
-                    })
-            servers_in_focus.sort(
-                key=lambda s: (s["critical"], s["high"], s["medium"], s["total"]),
-                reverse=True
-            )
-            servers_in_focus = servers_in_focus[:10]
+            if not focus:
+                for hostname, h_stats in server_stats.items():
+                    if h_stats.get("critical", 0) > 0 or h_stats.get("high", 0) > 0:
+                        servers_in_focus.append({
+                            "hostname": hostname,
+                            "ipv4": h_stats.get("ipv4", "N/A"),
+                            "os": h_stats.get("os", "Unknown"),
+                            "critical": h_stats.get("critical", 0),
+                            "high": h_stats.get("high", 0),
+                            "medium": h_stats.get("medium", 0),
+                            "low": h_stats.get("low", 0),
+                            "total": h_stats.get("total", 0),
+                        })
+                servers_in_focus.sort(
+                    key=lambda s: (s["critical"], s["high"], s["medium"], s["total"]),
+                    reverse=True
+                )
+                servers_in_focus = servers_in_focus[:10]
             
 
             # Calculate Team Stats (with team owner and app-level stats)
-            team_stats = {}
-            team_app_stats = {}  # {team: {app: {critical, high, etc.}}}
-            
-            for team_name, apps in grouped_by_team.items():
-                # Find system_owner for this team (from first app that has one)
-                team_owner = None
-                for app_name, servers in apps.items():
-                    for hostname, host_vulns in servers.items():
-                        info = hostname_to_app_info.get(hostname, {})
-                        if info.get("system_owner"):
-                            team_owner = info["system_owner"]
+            def calculate_team_stats(group_dict):
+                t_stats = {}
+                t_app_stats = {}
+                for team_name, apps in group_dict.items():
+                    team_owner = None
+                    for app_name, servers in apps.items():
+                        for hostname, host_vulns in servers.items():
+                            info = hostname_to_app_info.get(hostname, {})
+                            if info.get("system_owner"):
+                                team_owner = info["system_owner"]
+                                break
+                        if team_owner:
                             break
-                    if team_owner:
-                        break
-                
-                team_stats[team_name] = {
-                    "app_count": len(apps),
-                    "server_count": sum(len(servers) for servers in apps.values()),
-                    "team_owner": team_owner,
-                    "critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0
-                }
-                team_app_stats[team_name] = {}
-                
-                for app_name, servers in apps.items():
-                    app_sev = {"server_count": len(servers), "critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0}
-                    for hostname, host_vulns in servers.items():
-                        for v in host_vulns:
-                            team_stats[team_name]["total"] += 1
-                            app_sev["total"] += 1
-                            sev = v.get("severity", "").lower()
-                            if sev in team_stats[team_name]:
-                                team_stats[team_name][sev] += 1
-                            if sev in app_sev:
-                                app_sev[sev] += 1
-                    team_app_stats[team_name][app_name] = app_sev
+                    
+                    t_stats[team_name] = {
+                        "app_count": len(apps),
+                        "server_count": sum(len(servers) for servers in apps.values()),
+                        "team_owner": team_owner,
+                        "critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0
+                    }
+                    t_app_stats[team_name] = {}
+                    
+                    for app_name, servers in apps.items():
+                        app_sev = {"server_count": len(servers), "critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0}
+                        for hostname, host_vulns in servers.items():
+                            for v in host_vulns:
+                                t_stats[team_name]["total"] += 1
+                                app_sev["total"] += 1
+                                sev = v.get("severity", "").lower()
+                                if sev in t_stats[team_name]:
+                                    t_stats[team_name][sev] += 1
+                                if sev in app_sev:
+                                    app_sev[sev] += 1
+                        t_app_stats[team_name][app_name] = app_sev
+                return t_stats, t_app_stats
+
+            team_stats, team_app_stats = calculate_team_stats(grouped_by_team)
+            focused_team_stats, focused_team_app_stats = calculate_team_stats(focused_grouped_by_team)
             
             # Fetch unassigned applications (apps in DB with no server mappings)
             unassigned_apps = []
@@ -376,7 +389,10 @@ class ReportManager:
                     team_stats=team_stats,
                     team_app_stats=team_app_stats,
                     unassigned_apps=unassigned_apps,
-                    servers_in_focus=servers_in_focus
+                    servers_in_focus=servers_in_focus,
+                    focused_grouped_by_team=sorted_focused_teams,
+                    focused_team_stats=focused_team_stats,
+                    focused_team_app_stats=focused_team_app_stats
                 )
 
                 print(f"[OK] HTML report saved: {html_path}")

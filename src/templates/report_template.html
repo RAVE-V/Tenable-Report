@@ -584,11 +584,8 @@
             <a href="#team-summary">Team Summary</a>
             <a href="#app-summary">App Summary</a>
             <a href="#quick-wins-detail">Quick Wins</a>
-            {% if servers_in_focus %}
-            <a href="#servers-in-focus">Servers in Focus ({{ servers_in_focus|length }})</a>
-            {% endif %}
             {% if focused_grouped_by_team and focused_grouped_by_team|length > 0 %}
-            <a href="#focused-summary">Focused Servers Summary</a>
+            <a href="#focused-summary">Servers in Focus</a>
             {% endif %}
             {% if exploitable_vulns %}
             <a href="#exploitable" style="color: #ef4444;">Exploitable ({{ exploitable_vulns|length }})</a>
@@ -656,6 +653,121 @@
                 </div>
             </div>
         </header>
+
+        <!-- Focused Servers Summary Section -->
+        {% if focused_grouped_by_team and focused_grouped_by_team|length > 0 %}
+        <section id="focused-summary" style="margin-bottom: 30px;">
+            <h2>🎯 Servers in Focus</h2>
+            <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 16px;">
+                Deep drill-down for requested servers: Team → Application → Server → Vulnerabilities.
+            </p>
+
+            {% for team_name, apps in focused_grouped_by_team %}
+            {% set tstats = focused_team_stats[team_name] %}
+            {% set t_app_stats = focused_team_app_stats.get(team_name, {}) %}
+            <details class="team-accordion"
+                style="margin-bottom: 8px; border: 1px solid #374151; border-radius: 8px; overflow: hidden;">
+                <summary
+                    style="padding: 12px 16px; background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%); cursor: pointer;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span style="font-weight: 600; color: #e5e7eb; font-size: 1.05rem;">{{ team_name }}</span>
+                            {% if tstats.team_owner %}
+                            <span style="color: #9ca3af; font-size: 0.8rem;">👤 {{ tstats.team_owner }}</span>
+                            {% endif %}
+                            <span class="pill" style="background: #065f46; font-size: 0.7rem;">{{ tstats.app_count }}
+                                Apps</span>
+                            <span class="pill" style="background: #1e40af; font-size: 0.7rem;">{{ tstats.server_count }}
+                                Servers</span>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            <span class="pill critical" style="font-size: 0.7rem;">{{ tstats.critical }} Crit</span>
+                            <span class="pill high" style="font-size: 0.7rem;">{{ tstats.high }} High</span>
+                            <span class="pill medium" style="font-size: 0.7rem;">{{ tstats.medium }} Med</span>
+                            <span class="pill low" style="font-size: 0.7rem;">{{ tstats.low }} Low</span>
+                            <span class="pill" style="background: #374151; font-size: 0.7rem;">{{ tstats.total }}
+                                Total</span>
+                        </div>
+                    </div>
+                </summary>
+                <div style="padding: 12px 16px; background: #111827;">
+                    {% for app_name, servers in apps.items() %}
+                    {% set a_stats = t_app_stats.get(app_name, {}) %}
+                    <details class="app-accordion"
+                        style="margin-bottom: 6px; border: 1px solid #1f2937; border-radius: 6px; overflow: hidden;">
+                        <summary style="padding: 10px 14px; background: #1f2937; cursor: pointer;">
+                            <div
+                                style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="color: #60a5fa;">📦 {{ app_name }}</span>
+                                    <span style="color: #9ca3af; font-size: 0.8rem;">({{ servers|length }}
+                                        servers)</span>
+                                </div>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <span class="pill critical" style="font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.critical|default(0) }}</span>
+                                    <span class="pill high" style="font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.high|default(0) }}</span>
+                                    <span class="pill medium" style="font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.medium|default(0) }}</span>
+                                    <span class="pill low" style="font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.low|default(0) }}</span>
+                                    <span class="pill"
+                                        style="background: #374151; font-size: 0.65rem; padding: 2px 6px;">{{
+                                        a_stats.total|default(0) }}</span>
+                                </div>
+                            </div>
+                        </summary>
+                        <div style="padding: 8px 14px; background: #0f172a;">
+                            {% for hostname, host_vulns in servers.items() %}
+                            {% set srv_stats = server_stats.get(hostname, {}) %}
+                            <details class="server-accordion" style="margin-bottom: 4px; border: 1px solid #374151; border-radius: 4px; overflow: hidden;">
+                                <summary style="padding: 8px 12px; background: rgba(59, 130, 246, 0.05); cursor: pointer;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <span style="color: #d1d5db;">🖥️ {{ hostname }}</span>
+                                            <span style="color: #9ca3af; font-size: 0.75rem;">{{ srv_stats.ipv4|default('N/A') }}</span>
+                                        </div>
+                                        <div style="display: flex; gap: 4px; align-items: center;">
+                                            <span class="pill critical" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.critical|default(0) }}</span>
+                                            <span class="pill high" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.high|default(0) }}</span>
+                                            <span class="pill" style="background: #374151; font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.total|default(0) }}</span>
+                                        </div>
+                                    </div>
+                                </summary>
+                                <div class="content" style="padding: 10px; background: #0b1220;">
+                                    {% for vuln in host_vulns|sort(attribute='severity') %}
+                                    <div class="vuln-card {{ vuln.severity|lower }}">
+                                        <div class="vuln-title">
+                                            <span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity }}</span>
+                                            {{ vuln.plugin_name }}
+                                        </div>
+                                        <div class="vuln-details">
+                                            <div style="margin-bottom: 5px;">
+                                                <span class="detail-label">State:</span> <span class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span>
+                                                {% if vuln.vpr_score %} | <span class="detail-label">VPR:</span> {{ vuln.vpr_score }}{% endif %}
+                                            </div>
+                                            {% if vuln.solution %}
+                                            <div style="margin-top: 5px; font-style: italic; color: #cbd5e1;">
+                                                <span class="detail-label">Solution:</span>
+                                                {{ vuln.solution[:200] }}{% if vuln.solution|length > 200 %}...{% endif %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </details>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endfor %}
+        </section>
+        {% endif %}
 
         <!-- Team Summary Section (ENHANCED) -->
         {% if grouped_by_team and grouped_by_team|length > 0 %}
@@ -953,43 +1065,6 @@
                         </div>
                         {% endif %}
                     </div>
-                </div>
-            </details>
-        </section>
-        {% endif %}
-
-        <!-- Servers in Focus -->
-        {% if servers_in_focus %}
-        <section id="servers-in-focus" style="margin-bottom: 30px;">
-            <details open>
-                <summary style="font-size: 1.2em;">
-                    <span>🖥️ Servers in Focus (Top {{ servers_in_focus|length }})</span>
-                </summary>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; margin-top: 15px;">
-                    {% for srv in servers_in_focus %}
-                    <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; transition: border-color 0.2s;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <strong style="font-size: 0.95em; word-break: break-all;">{{ srv.hostname }}</strong>
-                            <span style="font-size: 0.8em; color: rgba(255,255,255,0.5);">{{ srv.ipv4 }}</span>
-                        </div>
-                        <div style="font-size: 0.78em; color: rgba(255,255,255,0.5); margin-bottom: 10px;">{{ srv.os }}</div>
-                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                            {% if srv.critical > 0 %}
-                            <span style="background: rgba(239,68,68,0.2); color: #ef4444; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;">Crit: {{ srv.critical }}</span>
-                            {% endif %}
-                            {% if srv.high > 0 %}
-                            <span style="background: rgba(249,115,22,0.2); color: #f97316; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;">High: {{ srv.high }}</span>
-                            {% endif %}
-                            {% if srv.medium > 0 %}
-                            <span style="background: rgba(234,179,8,0.2); color: #eab308; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;">Med: {{ srv.medium }}</span>
-                            {% endif %}
-                            {% if srv.low > 0 %}
-                            <span style="background: rgba(34,197,94,0.2); color: #22c55e; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;">Low: {{ srv.low }}</span>
-                            {% endif %}
-                            <span style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">Total: {{ srv.total }}</span>
-                        </div>
-                    </div>
-                    {% endfor %}
                 </div>
             </details>
         </section>
