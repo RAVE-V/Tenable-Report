@@ -584,6 +584,12 @@
             <a href="#team-summary">Team Summary</a>
             <a href="#app-summary">App Summary</a>
             <a href="#quick-wins-detail">Quick Wins</a>
+            {% if servers_in_focus %}
+            <a href="#servers-in-focus">Servers in Focus ({{ servers_in_focus|length }})</a>
+            {% endif %}
+            {% if focused_grouped_by_team and focused_grouped_by_team|length > 0 %}
+            <a href="#focused-summary">Focused Servers Summary</a>
+            {% endif %}
             {% if exploitable_vulns %}
             <a href="#exploitable" style="color: #ef4444;">Exploitable ({{ exploitable_vulns|length }})</a>
             {% endif %}
@@ -947,6 +953,43 @@
                         </div>
                         {% endif %}
                     </div>
+                </div>
+            </details>
+        </section>
+        {% endif %}
+
+        <!-- Servers in Focus -->
+        {% if servers_in_focus %}
+        <section id="servers-in-focus" style="margin-bottom: 30px;">
+            <details open>
+                <summary style="font-size: 1.2em;">
+                    <span>🖥️ Servers in Focus (Top {{ servers_in_focus|length }})</span>
+                </summary>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; margin-top: 15px;">
+                    {% for srv in servers_in_focus %}
+                    <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; transition: border-color 0.2s;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="font-size: 0.95em; word-break: break-all;">{{ srv.hostname }}</strong>
+                            <span style="font-size: 0.8em; color: rgba(255,255,255,0.5);">{{ srv.ipv4 }}</span>
+                        </div>
+                        <div style="font-size: 0.78em; color: rgba(255,255,255,0.5); margin-bottom: 10px;">{{ srv.os }}</div>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            {% if srv.critical > 0 %}
+                            <span style="background: rgba(239,68,68,0.2); color: #ef4444; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;">Crit: {{ srv.critical }}</span>
+                            {% endif %}
+                            {% if srv.high > 0 %}
+                            <span style="background: rgba(249,115,22,0.2); color: #f97316; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;">High: {{ srv.high }}</span>
+                            {% endif %}
+                            {% if srv.medium > 0 %}
+                            <span style="background: rgba(234,179,8,0.2); color: #eab308; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;">Med: {{ srv.medium }}</span>
+                            {% endif %}
+                            {% if srv.low > 0 %}
+                            <span style="background: rgba(34,197,94,0.2); color: #22c55e; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;">Low: {{ srv.low }}</span>
+                            {% endif %}
+                            <span style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">Total: {{ srv.total }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
             </details>
         </section>

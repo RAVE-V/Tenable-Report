@@ -39,7 +39,8 @@ class ReportManager:
         servers_only: bool = True,
         fresh: bool = False,
         use_cache: bool = False,
-        from_db: bool = False
+        from_db: bool = False,
+        focus: Optional[str] = None
     ) -> None:
         """Generate vulnerability report"""
         start_time = time.time()
@@ -186,7 +187,7 @@ class ReportManager:
                     Application, Application.app_id == ServerApplicationMap.app_id
                 )
                 for hostname, app_name, owner_team, system_owner in query.all():
-                    hostname_to_app_info[hostname] = {
+                    hostname_to_app_info[hostname.lower()] = {
                         "app_name": app_name,
                         "owner_team": owner_team or "Unassigned Team",
                         "system_owner": system_owner
@@ -198,7 +199,7 @@ class ReportManager:
             grouped_by_team = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
             
             for v in vulns:
-                hostname = v.get("hostname", "Unknown")
+                hostname = (v.get("hostname") or "unknown").lower()
                 app_info = hostname_to_app_info.get(hostname, {
                     "app_name": "Unassigned",
                     "owner_team": "Unassigned Team",
@@ -256,6 +257,27 @@ class ReportManager:
                     server_stats[hostname] = h_stats
                 app_stats[app_name] = stats
             
+            # Build "Servers in Focus" — top 10 most critical servers
+            servers_in_focus = []
+            for hostname, h_stats in server_stats.items():
+                if h_stats.get("critical", 0) > 0 or h_stats.get("high", 0) > 0:
+                    servers_in_focus.append({
+                        "hostname": hostname,
+                        "ipv4": h_stats.get("ipv4", "N/A"),
+                        "os": h_stats.get("os", "Unknown"),
+                        "critical": h_stats.get("critical", 0),
+                        "high": h_stats.get("high", 0),
+                        "medium": h_stats.get("medium", 0),
+                        "low": h_stats.get("low", 0),
+                        "total": h_stats.get("total", 0),
+                    })
+            servers_in_focus.sort(
+                key=lambda s: (s["critical"], s["high"], s["medium"], s["total"]),
+                reverse=True
+            )
+            servers_in_focus = servers_in_focus[:10]
+            
+
             # Calculate Team Stats (with team owner and app-level stats)
             team_stats = {}
             team_app_stats = {}  # {team: {app: {critical, high, etc.}}}
@@ -353,8 +375,10 @@ class ReportManager:
                     grouped_by_team=sorted_teams,
                     team_stats=team_stats,
                     team_app_stats=team_app_stats,
-                    unassigned_apps=unassigned_apps
+                    unassigned_apps=unassigned_apps,
+                    servers_in_focus=servers_in_focus
                 )
+
                 print(f"[OK] HTML report saved: {html_path}")
                 
             print("[OK] Report generation complete")
@@ -433,15 +457,15 @@ class ReportManager:
             grouper = ServerGrouper()
             server_data = grouper.group_by_server(vulns)
             
-            # Filter by min vulns
-            if min_vulns > 0:
-                server_data = [s for s in server_data if s[1]['total_vulns'] >= min_vulns] # server_data is list of tuples
-                print(f"Filtered to {len(server_data)} servers with >= {min_vulns} vulnerabilities")
-            
-            # Sort
+            # Sort first (converts dict -> list of tuples)
             server_data = grouper.sort_servers(server_data, sort_by=sort_by)
             
-            # Get Stats
+            # Filter by min vulns (server_data is now a list of tuples)
+            if min_vulns > 0:
+                server_data = [(hostname, data) for hostname, data in server_data if data['total_vulns'] >= min_vulns]
+                print(f"Filtered to {len(server_data)} servers with >= {min_vulns} vulnerabilities")
+            
+            # Get Stats (convert list of tuples back to dict for stats calculation)
             stats = grouper.get_server_stats(dict(server_data))
             
             # Generate Report
@@ -456,7 +480,13 @@ class ReportManager:
                 print(f"✓ Server report saved: {xlsx_path}")
             
             if format in ["html", "both"]:
-                 print("⚠️  HTML format for server reports coming on next release.")
+                 html_path = output_dir / f"Server_Report_{timestamp}.html"
+                 html_gen = HTMLReportGenerator()
+                 html_gen.generate_server_report(
+                     html_path, server_data, stats,
+                     metadata={"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+                 )
+                 print(f"✓ Server HTML report saved: {html_path}")
 
         except Exception as e:
             print(f"✗ Error: {e}", file=sys.stderr)

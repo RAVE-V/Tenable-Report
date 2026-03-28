@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Patch Report - {{ metadata.timestamp }}</title>
+    <style>
+        :root {
+            --bg: #0b1220;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --accent: #60a5fa;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.4;
+            font-size: 12px;
+        }
+
+        /* Sticky Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            background: #1a2332;
+            border-bottom: 1px solid var(--border);
+            padding: 8px 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        nav .nav-container {
+            max-width: 1250px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+            padding: 0 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+            font-size: 12px;
+        }
+
+        nav a:hover, nav a.active { color: var(--accent); }
+
+        .search-box { margin-left: auto; }
+
+        .search-box input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 6px 12px;
+            color: var(--text);
+            font-size: 12px;
+            width: 200px;
+        }
+
+        .search-box input::placeholder { color: var(--muted); }
+        .search-box input:focus { outline: none; border-color: var(--accent); }
+
+        .container { max-width: 1250px; margin: 0 auto; padding: 15px 20px; }
+
+        header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0 25px;
+            border: 1px solid var(--border);
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        h1 { font-size: 1.6em; margin: 0; }
+
+        .timestamp { font-size: 0.85em; color: rgba(255, 255, 255, 0.7); }
+
+        .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-label { font-size: 0.75em; color: rgba(255, 255, 255, 0.7); }
+
+        .stat-value { font-size: 1.1em; font-weight: bold; }
+
+        .stat-value.critical { color: #ef4444; }
+        .stat-value.high { color: #f97316; }
+        .stat-value.medium { color: #eab308; }
+        .stat-value.low { color: #22c55e; }
+
+        h2 {
+            font-size: 1.5em;
+            margin: 30px 0 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .section-subtitle {
+            font-size: 0.8em;
+            color: var(--muted);
+            font-weight: normal;
+        }
+
+        /* Pills */
+        .pill {
+            display: inline-block;
+            background: #374151;
+            color: #9ca3af;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            margin-right: 6px;
+        }
+
+        .pill.critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .pill.high { background: rgba(249, 115, 22, 0.2); color: #fdba74; border: 1px solid rgba(249, 115, 22, 0.3); }
+        .pill.medium { background: rgba(250, 204, 21, 0.2); color: #fde047; border: 1px solid rgba(250, 204, 21, 0.3); }
+        .pill.low { background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); }
+
+        /* Severity Badges */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .sev-critical { background: #ef4444; color: white; }
+        .sev-high { background: #f97316; color: white; }
+        .sev-medium { background: #eab308; color: #0b1220; }
+        .sev-low { background: #22c55e; color: white; }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 15px 0;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1a2332;
+            font-size: 12px;
+        }
+
+        th {
+            background: #0f172a;
+            color: var(--muted);
+            font-weight: 600;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover { background: rgba(96, 165, 250, 0.05); }
+        tr:last-child td { border-bottom: none; }
+
+        /* Collapsible Details */
+        details {
+            background: #1a2332;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.05em;
+            list-style: none;
+            user-select: none;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        summary:hover { background: rgba(96, 165, 250, 0.05); }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: '▶'; transition: transform 0.2s; color: var(--accent); font-size: 0.9em; }
+        details[open] summary::after { transform: rotate(90deg); }
+        details .content { padding: 0 15px 15px; }
+
+        /* Vuln Cards */
+        .vuln-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-left: 3px solid #64748b;
+        }
+
+        .vuln-card.critical { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.05); }
+        .vuln-card.high { border-left-color: #f97316; background: rgba(249, 115, 22, 0.05); }
+        .vuln-card.medium { border-left-color: #eab308; }
+        .vuln-card.low { border-left-color: #22c55e; }
+
+        .vuln-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .vuln-details { font-size: 0.9em; color: var(--muted); }
+        .detail-label { font-weight: bold; color: var(--text); margin-right: 4px; }
+
+        .cve-links { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+
+        .cve-link {
+            background: #3b82f6;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-decoration: none;
+            font-size: 10px;
+        }
+
+        .cve-link:hover { background: #2563eb; }
+
+        /* Fixed Back to Top */
+        .back-to-top-fixed {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--accent);
+            color: var(--bg);
+            padding: 12px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            z-index: 999;
+            transition: transform 0.2s, opacity 0.2s;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .back-to-top-fixed.visible { opacity: 1; pointer-events: auto; }
+        .back-to-top-fixed:hover { transform: translateY(-3px); }
+
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: #64748b;
+            margin-top: 40px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sticky Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="#summary" class="active">Summary</a>
+            <a href="#server-table">Server Table</a>
+            <a href="#server-detail">Server Detail</a>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search servers / vulns...">
+            </div>
+        </div>
+    </nav>
+
+    <!-- Fixed Back to Top -->
+    <a href="#summary" class="back-to-top-fixed" id="backToTop">↑ Top</a>
+
+    <div class="container">
+        <!-- Header -->
+        <header id="summary">
+            <div class="header-top">
+                <h1>🖥️ Server Patch Report</h1>
+                <span class="timestamp">Generated: {{ metadata.timestamp }}</span>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-label">Total Servers</div>
+                    <div class="stat-value">{{ stats.total_servers }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Total Vulns</div>
+                    <div class="stat-value">{{ stats.total_vulns }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Critical</div>
+                    <div class="stat-value critical">{{ stats.severity_totals.critical }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">High</div>
+                    <div class="stat-value high">{{ stats.severity_totals.high }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Medium</div>
+                    <div class="stat-value medium">{{ stats.severity_totals.medium }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Low</div>
+                    <div class="stat-value low">{{ stats.severity_totals.low }}</div>
+                </div>
+                {% if stats.avg_vulns_per_server is defined %}
+                <div class="stat-item">
+                    <div class="stat-label">Avg Vulns/Server</div>
+                    <div class="stat-value">{{ "%.1f"|format(stats.avg_vulns_per_server) }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Server Summary Table -->
+        <section id="server-table" style="margin-bottom: 30px;">
+            <h2>📊 Server Summary <span class="section-subtitle">({{ server_data|length }} servers)</span></h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Server</th>
+                            <th>IP</th>
+                            <th>OS</th>
+                            <th style="text-align:center; color:#ef4444;">Crit</th>
+                            <th style="text-align:center; color:#f97316;">High</th>
+                            <th style="text-align:center; color:#eab308;">Med</th>
+                            <th style="text-align:center; color:#22c55e;">Low</th>
+                            <th style="text-align:center;">Total</th>
+                            <th>Quick Wins</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hostname, data in server_data %}
+                        <tr class="searchable-row">
+                            <td style="font-weight:600;">
+                                <a href="#server-{{ loop.index }}" style="color: var(--accent); text-decoration:none;">{{ hostname }}</a>
+                            </td>
+                            <td style="color:var(--muted); font-size:0.9em;">{{ data.ipv4 or 'N/A' }}</td>
+                            <td style="color:var(--muted); font-size:0.85em; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                                title="{{ data.operating_system or 'Unknown' }}">
+                                {{ data.operating_system or 'Unknown' }}
+                            </td>
+                            <td style="text-align:center; color:{% if data.severity_counts.critical > 0 %}#ef4444; font-weight:bold{% else %}#4b5563{% endif %};">
+                                {{ data.severity_counts.critical }}</td>
+                            <td style="text-align:center; color:{% if data.severity_counts.high > 0 %}#f97316{% else %}#4b5563{% endif %};">
+                                {{ data.severity_counts.high }}</td>
+                            <td style="text-align:center; color:{% if data.severity_counts.medium > 0 %}#eab308{% else %}#4b5563{% endif %};">
+                                {{ data.severity_counts.medium }}</td>
+                            <td style="text-align:center; color:{% if data.severity_counts.low > 0 %}#22c55e{% else %}#4b5563{% endif %};">
+                                {{ data.severity_counts.low }}</td>
+                            <td style="text-align:center; color:var(--muted);">{{ data.total_vulns }}</td>
+                            <td style="text-align:center;">
+                                {% if data.quick_wins > 0 %}
+                                <span class="pill" style="background:rgba(124,58,237,0.2); color:#d8b4fe; border:1px solid rgba(124,58,237,0.3);">{{ data.quick_wins }}</span>
+                                {% else %}
+                                <span style="color:#4b5563;">0</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Server Detail Drill-Down -->
+        <section id="server-detail">
+            <h2>🔍 Server Detail <span class="section-subtitle">Click to expand each server</span></h2>
+
+            {% for hostname, data in server_data %}
+            <details id="server-{{ loop.index }}" class="searchable-server">
+                <summary>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <span>🖥️ {{ hostname }}</span>
+                        <span style="color:var(--muted); font-size:0.85em;">{{ data.ipv4 or '' }}</span>
+                        <span style="color:var(--muted); font-size:0.8em;">{{ data.operating_system or '' }}</span>
+                    </div>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <span class="pill critical" style="font-size:0.7rem;">{{ data.severity_counts.critical }} Crit</span>
+                        <span class="pill high" style="font-size:0.7rem;">{{ data.severity_counts.high }} High</span>
+                        <span class="pill medium" style="font-size:0.7rem;">{{ data.severity_counts.medium }} Med</span>
+                        <span class="pill low" style="font-size:0.7rem;">{{ data.severity_counts.low }} Low</span>
+                        <span class="pill" style="background:#374151; font-size:0.7rem;">{{ data.total_vulns }} Total</span>
+                    </div>
+                </summary>
+                <div class="content">
+                    {% for vuln in data.vulnerabilities %}
+                    {% set sev = vuln.severity|lower %}
+                    <div class="vuln-card {{ sev }}">
+                        <div class="vuln-title">
+                            <span class="badge sev-{{ sev }}">{{ vuln.severity }}</span>
+                            {{ vuln.plugin_name }}
+                        </div>
+                        <div class="vuln-details">
+                            {% if vuln.plugin_id %}
+                            <span class="detail-label">Plugin:</span> {{ vuln.plugin_id }}&nbsp;&nbsp;
+                            {% endif %}
+                            {% if vuln.port is defined and vuln.port %}
+                            <span class="detail-label">Port:</span> {{ vuln.port }}&nbsp;&nbsp;
+                            {% endif %}
+                            {% if vuln.state %}
+                            <span class="detail-label">State:</span> {{ vuln.state }}&nbsp;&nbsp;
+                            {% endif %}
+                            {% if vuln.solution %}
+                            <br><span class="detail-label">Solution:</span> {{ vuln.solution }}
+                            {% endif %}
+                            {% if vuln.cves %}
+                            <div class="cve-links">
+                                {% for cve in vuln.cves %}
+                                <a href="https://nvd.nist.gov/vuln/detail/{{ cve }}" target="_blank" class="cve-link">{{ cve }}</a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            {% endfor %}
+        </section>
+    </div>
+
+    <footer>
+        Generated by Tenable Report Generator | {{ metadata.timestamp }}
+    </footer>
+
+    <script>
+        // Back to Top visibility
+        const backToTop = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            backToTop.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', function () {
+            const query = this.value.toLowerCase();
+
+            // Filter table rows
+            document.querySelectorAll('.searchable-row').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+            });
+
+            // Filter detail sections
+            document.querySelectorAll('.searchable-server').forEach(detail => {
+                detail.style.display = detail.textContent.toLowerCase().includes(query) ? '' : 'none';
+            });
+        });
+    </script>
+</body>
+
+</html>

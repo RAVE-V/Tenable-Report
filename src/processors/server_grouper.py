@@ -54,7 +54,7 @@ class ServerGrouper:
         })
         
         for vuln in vulns:
-            hostname = vuln.get("hostname", "Unknown")
+            hostname = (vuln.get("hostname") or "unknown").lower()
             operating_system = vuln.get("operating_system")
             
             # Detect device type

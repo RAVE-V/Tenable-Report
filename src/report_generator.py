@@ -19,9 +19,9 @@ class HTMLReportGenerator:
     def generate(
         self,
         output_path: Path,
-        grouped_vulns: List[Tuple[str, Dict[str, List[Dict]]]] = None,
-        vendor_stats: Dict[str, Dict] = None,
-        quick_wins: Dict[str, List[Dict]] = None,
+        grouped_vulns: List = None,
+        vendor_stats: Dict = None,
+        quick_wins: Dict = None,
         metadata: Dict = None,
         exploitable_vulns: List[Dict] = None,
         grouped_by_app: List = None,
@@ -30,15 +30,19 @@ class HTMLReportGenerator:
         grouped_by_team: List = None,
         team_stats: Dict = None,
         team_app_stats: Dict = None,
-        unassigned_apps: List = None
+        unassigned_apps: List = None,
+        servers_in_focus: List = None,
+        focused_grouped_by_team: List = None,
+        focused_team_stats: Dict = None,
+        focused_team_app_stats: Dict = None
     ):
         """Generate HTML report"""
         if not output_path:
             raise ValueError("Output path is required")
-            
+
         # Load template
         template = self.env.get_template("report_template.html")
-        
+
         # Render HTML
         html_content = template.render(
             grouped_vulns=grouped_vulns or [],
@@ -52,14 +56,53 @@ class HTMLReportGenerator:
             grouped_by_team=grouped_by_team or [],
             team_stats=team_stats or {},
             team_app_stats=team_app_stats or {},
-            unassigned_apps=unassigned_apps or []
+            unassigned_apps=unassigned_apps or [],
+            servers_in_focus=servers_in_focus or [],
+            focused_grouped_by_team=focused_grouped_by_team or [],
+            focused_team_stats=focused_team_stats or {},
+            focused_team_app_stats=focused_team_app_stats or {}
         )
+
         
         # Write to file
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html_content)
     
+    def generate_server_report(
+        self,
+        output_path: Path,
+        server_data: List[Tuple[str, Dict]],
+        stats: Dict,
+        metadata: Dict = None
+    ):
+        """Generate HTML report for server patch data.
+        
+        Args:
+            output_path: Path to write the HTML file
+            server_data: List of (hostname, data_dict) tuples
+            stats: Overall statistics from ServerGrouper.get_server_stats()
+            metadata: Optional metadata dict (timestamp, etc.)
+        """
+        if not output_path:
+            raise ValueError("Output path is required")
+        
+        from datetime import datetime
+        if metadata is None:
+            metadata = {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        
+        template = self.env.get_template("server_report_template.html")
+        
+        html_content = template.render(
+            server_data=server_data,
+            stats=stats,
+            metadata=metadata
+        )
+        
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
     @staticmethod
     def get_vendor_advisory_link(vendor: str, cve: str = None) -> str:
         """

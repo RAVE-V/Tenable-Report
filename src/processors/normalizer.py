@@ -31,7 +31,7 @@ class VulnerabilityNormalizer:
         return {
             # Asset details
             "asset_uuid": asset.get("uuid"),
-            "hostname": asset.get("hostname") or "unknown",
+            "hostname": (asset.get("hostname") or "unknown").lower(),
             "ipv4": asset.get("ipv4"),
             "operating_system": asset.get("operating_system"),
             
