@@ -218,7 +218,7 @@ class ReportManager:
                 grouped_by_app[app_name][hostname].append(v)
                 grouped_by_team[team][app_name][hostname].append(v)
                 
-                if hostname in focus_list:
+                if hostname in focus_list or app_name.lower() in focus_list:
                     focused_grouped_by_team[team][app_name][hostname].append(v)
             
             sorted_apps = sorted(grouped_by_app.items(), key=lambda x: (x[0] == "Unassigned", x[0]))
