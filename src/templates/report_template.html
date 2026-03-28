@@ -581,12 +581,12 @@
     <nav>
         <div class="nav-container">
             <a href="#summary" class="active">Summary</a>
-            <a href="#team-summary">Team Summary</a>
-            <a href="#app-summary">App Summary</a>
-            <a href="#quick-wins-detail">Quick Wins</a>
             {% if focused_grouped_by_team and focused_grouped_by_team|length > 0 %}
             <a href="#focused-summary">Servers in Focus</a>
             {% endif %}
+            <a href="#team-summary">Team Summary</a>
+            <a href="#app-summary">App Summary</a>
+            <a href="#quick-wins-detail">Quick Wins</a>
             {% if exploitable_vulns %}
             <a href="#exploitable" style="color: #ef4444;">Exploitable ({{ exploitable_vulns|length }})</a>
             {% endif %}
