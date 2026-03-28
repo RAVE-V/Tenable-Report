@@ -15,7 +15,8 @@ A production-grade, automated vulnerability reporting tool for **Tenable.io** th
 | Feature | Description |
 |---------|-------------|
 | ⚡ **Instant Reports** | Generate reports in <1 second using pre-processed database |
-| 🎯 **Quick Wins Detection** | Automatically identify easy-to-fix vulnerabilities |
+| 🎯 **Focus Reports** | Generate drill-down reports for specific servers or applications |
+| 🚀 **Quick Wins Detection** | Automatically identify easy-to-fix vulnerabilities |
 | 🏢 **Device Classification** | Smart server/workstation/network detection with custom overrides |
 | 📊 **Multiple Formats** | HTML (dark theme) and Excel outputs |
 | 🔍 **Advanced Filtering** | Filter by severity, state, device type, and more |
@@ -69,6 +70,9 @@ python -m src.cli generate-report
 # High-speed report from database
 python -m src.cli sync-all          # Run once to populate database
 python -m src.cli generate-report --from-db   # Instant reports!
+
+# Focus report for specific assets
+python -m src.cli generate-report --focus-app "File Server" --focus-servers "SRV-PROD-01"
 ```
 
 ---
@@ -97,6 +101,8 @@ src.cli
 │   ├── --fresh              # Force API refresh
 │   ├── --use-cache          # Use cached data silently
 │   ├── --from-db            # Use pre-synced database (fastest)
+│   ├── --focus-servers      # Focus on specific servers (comma-separated)
+│   ├── --focus-app          # Focus on specific applications (comma-separated)
 │   └── --all-devices        # Include workstations/network devices
 │
 ├── server-report            # Server-focused report with drill-down
@@ -151,6 +157,20 @@ python -m src.cli generate-report --from-db --severity Critical,High
 
 # Option 3: Both HTML and Excel
 python -m src.cli generate-report --from-db --format both
+```
+
+### Focused Reporting (NEW)
+You can generate reports that prioritize specific servers or applications. These will appear in a dedicated "Servers in Focus" section at the top of the report with a deep drill-down (Team → App → Server → Vulnerabilities).
+
+```bash
+# Focus on specific servers
+python -m src.cli generate-report --focus-servers "SRV-WEB-01, SRV-DB-02"
+
+# Focus on specific applications (handles spaces and mixed quotes)
+python -m src.cli generate-report --focus-app "File Server, 'External Portal'"
+
+# Combine both
+python -m src.cli generate-report --focus-app "Database" --focus-servers "SRV-TEST-01"
 ```
 
 ### Server Mapping Workflow
