@@ -290,7 +290,7 @@ class ReportManager:
                 unassigned_apps = []
                 all_apps = session.query(Application).all()
                 for app in all_apps:
-                    if not app.server_mappings:
+                    if not app.mappings:
                         unassigned_apps.append({"app_name": app.app_name, "app_type": app.app_type or "Unknown",
                                               "owner_team": app.owner_team or "Unassigned Team", "system_owner": app.system_owner or "Unknown"})
 
