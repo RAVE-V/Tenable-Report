@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    image: tenable-report:latest
+    image: tenable-report:v1.0.0
     container_name: tenable-report
     env_file:
       - .env

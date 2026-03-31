@@ -16,7 +16,7 @@ class QuickWinsDetector:
     2. Unsupported products: EOL/deprecated products to decommission
     """
     
-    # Regex patterns for version-threshold detection
+    # Regex patterns for version-threshold detection (Note: these are regex, not SQL)
     VERSION_PATTERNS = [
         r'<\s*\d+\.\d+',  # < 2.4.54
         r'prior to\s+\d+\.\d+',  # prior to 2.4.54

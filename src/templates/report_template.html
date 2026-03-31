@@ -732,6 +732,8 @@
                                         <div style="display: flex; gap: 4px; align-items: center;">
                                             <span class="pill critical" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.critical|default(0) }}</span>
                                             <span class="pill high" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.high|default(0) }}</span>
+                                            <span class="pill medium" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.medium|default(0) }}</span>
+                                            <span class="pill low" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.low|default(0) }}</span>
                                             <span class="pill" style="background: #374151; font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.total|default(0) }}</span>
                                         </div>
                                     </div>
@@ -1256,6 +1258,8 @@
                             endif %}
                             {% if v_stat.medium|default(0) > 0 %}<span class="badge sev-medium">{{ v_stat.medium }}
                                 M</span>{% endif %}
+                            {% if v_stat.low|default(0) > 0 %}<span class="badge sev-low">{{ v_stat.low }}
+                                L</span>{% endif %}
                             <span class="pill blue">{{ v_stat.total_vulns }} Items</span>
                             <span class="pill" style="background: #4b5563; color: white;">{{ v_stat.affected_assets }}
                                 Devices</span>
