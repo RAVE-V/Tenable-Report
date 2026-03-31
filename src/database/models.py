@@ -172,6 +172,7 @@ class Vulnerability(Base):
     # Timestamps
     first_found = Column(DateTime)
     last_found = Column(DateTime)
+    age_days = Column(Integer)
     synced_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Store full raw data for reference
@@ -195,8 +196,16 @@ class Vulnerability(Base):
             except json.JSONDecodeError:
                 cve_list = []
         
-        # Deserialize raw_data if needed (not usually needed for report summary, skipping for performance unless requested)
-        # If any report template uses raw_data, we should deserialize it. Currently templates use specific fields.
+        # Calculate current age on the fly for the report
+        current_age = self.age_days
+        if self.first_found:
+            now = datetime.now(timezone.utc)
+            # Ensure self.first_found is timezone aware if now is
+            ff = self.first_found
+            if ff.tzinfo is None:
+                ff = ff.replace(tzinfo=timezone.utc)
+            delta = now - ff
+            current_age = max(0, delta.days)
         
         return {
             'asset_uuid': self.asset_uuid,
@@ -218,4 +227,5 @@ class Vulnerability(Base):
             'description': self.description,
             'first_found': self.first_found.isoformat() if self.first_found else None,
             'last_found': self.last_found.isoformat() if self.last_found else None,
+            'age_days': current_age,
         }

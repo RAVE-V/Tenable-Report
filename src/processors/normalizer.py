@@ -28,6 +28,18 @@ class VulnerabilityNormalizer:
         asset = raw_vuln.get("asset") or {}
         plugin = raw_vuln.get("plugin") or {}
         
+        # Date parsing
+        first_found = VulnerabilityNormalizer._parse_date(raw_vuln.get("first_found"))
+        last_found = VulnerabilityNormalizer._parse_date(raw_vuln.get("last_found"))
+        
+        # Calculate age in days
+        age_days = None
+        if first_found:
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
+            delta = now - first_found
+            age_days = max(0, delta.days)
+
         return {
             # Asset details
             "asset_uuid": asset.get("uuid"),
@@ -52,8 +64,9 @@ class VulnerabilityNormalizer:
             # Detection details
             "severity": raw_vuln.get("severity", "info").capitalize(),
             "state": VulnerabilityNormalizer._map_state(raw_vuln.get("state", "unknown")),
-            "first_found": VulnerabilityNormalizer._parse_date(raw_vuln.get("first_found")),
-            "last_found": VulnerabilityNormalizer._parse_date(raw_vuln.get("last_found")),
+            "first_found": first_found,
+            "last_found": last_found,
+            "age_days": age_days,
             
             # For processing
             "vendor": None,  # To be populated by vendor detector

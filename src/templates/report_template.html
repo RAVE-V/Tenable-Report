@@ -748,6 +748,7 @@
                                         <div class="vuln-details">
                                             <div style="margin-bottom: 5px;">
                                                 <span class="detail-label">State:</span> <span class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span>
+                                                {% if vuln.age_days is not none %} | <span class="detail-label">Age:</span> {{ vuln.age_days }} days{% endif %}
                                                 {% if vuln.vpr_score %} | <span class="detail-label">VPR:</span> {{ vuln.vpr_score }}{% endif %}
                                             </div>
                                             {% if vuln.solution %}
@@ -1092,6 +1093,7 @@
                                     <th>Severity</th>
                                     <th>VPR</th>
                                     <th>Vulnerability</th>
+                                    <th>Age (Days)</th>
                                     <th>Asset</th>
                                     <th>Application</th>
                                     <th>State</th>
@@ -1118,6 +1120,13 @@
                                         <div style="font-weight: 600;">{{ vuln.plugin_name }}</div>
                                         <div style="font-size: 0.9em; color: var(--muted);">Plugin ID: {{ vuln.plugin_id
                                             }}</div>
+                                    </td>
+                                    <td>
+                                        {% if vuln.age_days is not none %}
+                                        <span class="pill {% if vuln.age_days > 90 %}critical{% elif vuln.age_days > 30 %}high{% endif %}">{{ vuln.age_days }} days</span>
+                                        {% else %}
+                                        <span class="pill">N/A</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <div>{{ vuln.hostname }}</div>
@@ -1208,6 +1217,7 @@
                                         <span class="detail-label">IP:</span> {{ vuln.ipv4 }} |
                                         <span class="detail-label">State:</span> <span
                                             class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span>
+                                        {% if vuln.age_days is not none %} | <span class="detail-label">Age:</span> {{ vuln.age_days }} days{% endif %}
                                     </div>
                                     {% if vuln.vpr_score %}
                                     <div style="margin-bottom: 5px;">

@@ -154,3 +154,35 @@ class TestServerApplicationMap:
         ).first()
         
         assert result is None
+
+
+class TestVulnerabilityModel:
+    """Test Vulnerability model"""
+    
+    def test_create_vulnerability(self, db_session):
+        """Test creating a vulnerability with age_days"""
+        from src.database.models import Vulnerability
+        from datetime import datetime, timezone, timedelta
+        
+        ten_days_ago = datetime.now(timezone.utc) - timedelta(days=10)
+        
+        vuln = Vulnerability(
+            asset_uuid="asset-1",
+            plugin_id="12345",
+            plugin_name="Test Vuln",
+            severity="High",
+            first_found=ten_days_ago,
+            age_days=10
+        )
+        
+        db_session.add(vuln)
+        db_session.commit()
+        
+        assert vuln.vuln_id is not None
+        assert vuln.age_days == 10
+        
+        # Test to_dict
+        d = vuln.to_dict()
+        assert d['age_days'] == 10
+        assert 'first_found' in d
+        assert d['plugin_name'] == "Test Vuln"

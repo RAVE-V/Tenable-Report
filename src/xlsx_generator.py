@@ -55,7 +55,8 @@ class XLSXReportGenerator:
             "severity",
             "state",
             "first_found",
-            "last_found"
+            "last_found",
+            "age_days"
         ]
         
         # Ensure all columns exist
@@ -195,7 +196,7 @@ class XLSXReportGenerator:
                     "hostname", "ipv4", "operating_system",
                     "plugin_id", "plugin_name", "severity", "state",
                     "cve", "solution", "has_patch", "exploit_available",
-                    "first_found", "last_found"
+                    "first_found", "last_found", "age_days"
                 ]
                 
                 # Ensure all columns exist

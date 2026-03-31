@@ -432,6 +432,9 @@
                             {% if vuln.state %}
                             <span class="detail-label">State:</span> {{ vuln.state }}&nbsp;&nbsp;
                             {% endif %}
+                            {% if vuln.age_days is defined and vuln.age_days is not none %}
+                            <span class="detail-label">Age:</span> {{ vuln.age_days }} days&nbsp;&nbsp;
+                            {% endif %}
                             {% if vuln.solution %}
                             <br><span class="detail-label">Solution:</span> {{ vuln.solution }}
                             {% endif %}
