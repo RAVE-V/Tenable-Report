@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    image: tenable-report:latest
+    container_name: tenable-report
+    env_file:
+      - .env
+    volumes:
+      - ./reports:/app/reports
+      - ./.cache:/app/.cache
+      - ./data:/app/data
+    # Use standard interactive terminal support
+    stdin_open: true
+    tty: true
+
+# Optional: define volumes explicitly if needed, but relative host paths are fine for this use case.

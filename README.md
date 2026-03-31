@@ -61,6 +61,41 @@ cp .env.example .env
 python -m src.cli init
 ```
 
+### 🐳 Running with Docker / Podman
+
+The project includes a `Dockerfile` and `docker-compose.yml` for easy deployment.
+
+#### 1. Setup Environment
+Ensure you have a `.env` file in the project root with your Tenable credentials. To persist the database in a container, it is recommended to use a path within the `/app/data` directory:
+```env
+DATABASE_URL=sqlite:///./data/tenable_reports.db
+```
+
+#### 2. Build the Image
+```bash
+docker compose build
+```
+
+#### 3. Run Commands
+You can run any CLI command using `docker compose run --rm app [COMMAND]`.
+
+**Initialize Database:**
+```bash
+docker compose run --rm app init
+```
+
+**Sync Data:**
+```bash
+docker compose run --rm app sync-all
+```
+
+**Generate Report:**
+```bash
+docker compose run --rm app generate-report --from-db
+```
+
+Generated reports will be available in the local `./reports` directory on your host machine.
+
 ### Generate Your First Report
 
 ```bash
