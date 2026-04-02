@@ -159,19 +159,6 @@
             color: #22c55e;
         }
 
-        /* Quick Wins Link */
-        .quick-win-link {
-            text-decoration: none;
-            color: inherit;
-            transition: transform 0.2s;
-            background: rgba(124, 58, 237, 0.2);
-            border: 1px solid rgba(124, 58, 237, 0.4);
-        }
-
-        .quick-win-link:hover {
-            transform: translateY(-2px);
-        }
-
         /* Section Headers */
         h2 {
             font-size: 1.5em;
@@ -483,79 +470,6 @@
             transform: translateY(-3px);
         }
 
-        /* Pagination */
-        .pagination {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            justify-content: center;
-            margin: 15px 0;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 6px;
-        }
-
-        .pagination button {
-            background: var(--accent);
-            color: var(--bg);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: opacity 0.2s;
-        }
-
-        .pagination button:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        .pagination button:not(:disabled):hover {
-            opacity: 0.8;
-        }
-
-        .pagination .page-info {
-            color: var(--muted);
-            font-size: 0.9em;
-        }
-
-        /* Quick Win Item - Expandable */
-        .qw-item {
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.05);
-            cursor: pointer;
-        }
-
-        .qw-item.vt {
-            border-left: 3px solid #a78bfa;
-        }
-
-        .qw-item.eol {
-            border-left: 3px solid #ec4899;
-        }
-
-        .qw-item .qw-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .qw-devices {
-            display: none;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px dashed var(--border);
-        }
-
-        .qw-item.open .qw-devices {
-            display: block;
-        }
-
         .device-chip {
             display: inline-block;
             background: rgba(96, 165, 250, 0.2);
@@ -582,14 +496,10 @@
         <div class="nav-container">
             <a href="#summary" class="active">Summary</a>
             {% if focused_grouped_by_team and focused_grouped_by_team|length > 0 %}
-            <a href="#focused-summary">Servers in Focus</a>
+            <a href="#focused-summary">Prioritised Servers</a>
             {% endif %}
             <a href="#team-summary">Team Summary</a>
             <a href="#app-summary">App Summary</a>
-            <a href="#quick-wins-detail">Quick Wins</a>
-            {% if exploitable_vulns %}
-            <a href="#exploitable" style="color: #ef4444;">Exploitable ({{ exploitable_vulns|length }})</a>
-            {% endif %}
             <a href="#drill-down">Drill-Down</a>
             <a href="#vendors">By Vendor</a>
             <div class="search-box">
@@ -640,13 +550,6 @@
                     <div class="stat-value low">{{ metadata.severity_counts.low|default(0) }}</div>
                 </div>
 
-                {% if quick_wins and quick_wins.total_quick_wins > 0 %}
-                <a href="#quick-wins-detail" class="stat-item quick-win-link" style="text-decoration: none;">
-                    <div class="stat-label">✨ Quick Wins</div>
-                    <div class="stat-value" style="color: #d8b4fe;">{{ quick_wins.total_quick_wins }}</div>
-                </a>
-                {% endif %}
-
                 <div class="stat-item">
                     <div class="stat-label">Mapped Servers</div>
                     <div class="stat-value">{{ metadata.mapped_servers }}/{{ metadata.total_assets }}</div>
@@ -665,9 +568,9 @@
         <!-- Focused Servers Summary Section -->
         {% if focused_grouped_by_team and focused_grouped_by_team|length > 0 %}
         <section id="focused-summary" style="margin-bottom: 30px;">
-            <h2>🎯 Servers in focus - currently prioritised for remediation</h2>
+            <h2>🎯 Servers Currently Prioritised For Remediation</h2>
             <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 16px;">
-                Deep drill-down for requested servers: Team → Application → Server → Vulnerabilities.
+                Deep drill-down for prioritised servers: Team → Application → Server → Vulnerabilities.
             </p>
 
             {% for team_name, apps in focused_grouped_by_team %}
@@ -780,12 +683,12 @@
         </section>
         {% endif %}
 
-        <!-- Team Summary Section (ENHANCED) -->
+        <!-- Team Summary Section (ENHANCED with Drill-Down) -->
         {% if grouped_by_team and grouped_by_team|length > 0 %}
         <section id="team-summary" style="margin-bottom: 30px;">
             <h2>👥 Team Summary</h2>
             <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 16px;">
-                Vulnerability ownership grouped by team → application → server. Click to expand.
+                Vulnerability ownership grouped by team → application → server → vulnerabilities. Click to expand.
             </p>
 
             {% for team_name, apps in grouped_by_team %}
@@ -846,52 +749,49 @@
                             </div>
                         </summary>
                         <div style="padding: 8px 14px; background: #0f172a;">
-                            <table style="width: 100%; font-size: 0.85rem;">
-                                <thead>
-                                    <tr style="border-bottom: 1px solid #374151;">
-                                        <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">Server</th>
-                                        <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">IP</th>
-                                        <th style="text-align: left; padding: 6px 8px; color: #9ca3af;">OS</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #ef4444; width: 50px;">
-                                            Crit</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #f97316; width: 50px;">
-                                            High</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #eab308; width: 50px;">
-                                            Med</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #22c55e; width: 50px;">
-                                            Low</th>
-                                        <th style="text-align: center; padding: 6px 4px; color: #9ca3af; width: 50px;">
-                                            Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for hostname, vulns in servers.items()|sort %}
-                                    {% set srv_stats = server_stats.get(hostname, {}) %}
-                                    <tr style="border-bottom: 1px solid #1f2937;">
-                                        <td style="padding: 6px 8px; color: #d1d5db;">🖥️ {{ hostname }}</td>
-                                        <td style="padding: 6px 8px; color: #9ca3af; font-size: 0.8rem;">{{
-                                            srv_stats.ipv4|default('N/A') }}</td>
-                                        <td style="padding: 6px 8px; color: #9ca3af; font-size: 0.75rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                                            title="{{ srv_stats.os|default('Unknown') }}">{{
-                                            srv_stats.os|default('Unknown') }}</td>
-                                        <td
-                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.critical|default(0) > 0 %}#ef4444{% else %}#4b5563{% endif %}; font-weight: {% if srv_stats.critical|default(0) > 0 %}bold{% else %}normal{% endif %};">
-                                            {{ srv_stats.critical|default(0) }}</td>
-                                        <td
-                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.high|default(0) > 0 %}#f97316{% else %}#4b5563{% endif %};">
-                                            {{ srv_stats.high|default(0) }}</td>
-                                        <td
-                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.medium|default(0) > 0 %}#eab308{% else %}#4b5563{% endif %};">
-                                            {{ srv_stats.medium|default(0) }}</td>
-                                        <td
-                                            style="text-align: center; padding: 6px 4px; color: {% if srv_stats.low|default(0) > 0 %}#22c55e{% else %}#4b5563{% endif %};">
-                                            {{ srv_stats.low|default(0) }}</td>
-                                        <td style="text-align: center; padding: 6px 4px; color: #9ca3af;">{{
-                                            srv_stats.total|default(vulns|length) }}</td>
-                                    </tr>
+                            {% for hostname, host_vulns in servers.items()|sort %}
+                            {% set srv_stats = server_stats.get(hostname, {}) %}
+                            <details class="server-accordion" style="margin-bottom: 4px; border: 1px solid #374151; border-radius: 4px; overflow: hidden;">
+                                <summary style="padding: 8px 12px; background: rgba(59, 130, 246, 0.05); cursor: pointer;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <span style="color: #d1d5db;">🖥️ {{ hostname }}</span>
+                                            <span style="color: #9ca3af; font-size: 0.75rem;">{{ srv_stats.ipv4|default('N/A') }}</span>
+                                        </div>
+                                        <div style="display: flex; gap: 4px; align-items: center;">
+                                            <span class="pill critical" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.critical|default(0) }}</span>
+                                            <span class="pill high" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.high|default(0) }}</span>
+                                            <span class="pill medium" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.medium|default(0) }}</span>
+                                            <span class="pill low" style="font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.low|default(0) }}</span>
+                                            <span class="pill" style="background: #374151; font-size: 0.6rem; padding: 1px 4px;">{{ srv_stats.total|default(0) }}</span>
+                                        </div>
+                                    </div>
+                                </summary>
+                                <div class="content" style="padding: 10px; background: #0b1220;">
+                                    {% for vuln in host_vulns|sort(attribute='severity') %}
+                                    <div class="vuln-card {{ vuln.severity|lower }}">
+                                        <div class="vuln-title">
+                                            <span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity }}</span>
+                                            {{ vuln.plugin_name }}
+                                        </div>
+                                        <div class="vuln-details">
+                                            <div style="margin-bottom: 5px;">
+                                                <span class="detail-label">State:</span> <span class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span>
+                                                {% if vuln.age_days is not none %} | <span class="detail-label">Age:</span> {{ vuln.age_days }} days{% endif %}
+                                                {% if vuln.vpr_score %} | <span class="detail-label">VPR:</span> {{ vuln.vpr_score }}{% endif %}
+                                            </div>
+                                            {% if vuln.solution %}
+                                            <div style="margin-top: 5px; font-style: italic; color: #cbd5e1;">
+                                                <span class="detail-label">Solution:</span>
+                                                {{ vuln.solution[:200] }}{% if vuln.solution|length > 200 %}...{% endif %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                     {% endfor %}
-                                </tbody>
-                            </table>
+                                </div>
+                            </details>
+                            {% endfor %}
                         </div>
                     </details>
                     {% endfor %}
@@ -982,181 +882,6 @@
             </details>
             {% endif %}
         </section>
-
-        <!-- Quick Wins Section with Expandable Device Lists -->
-        {% if quick_wins and quick_wins.total_quick_wins > 0 %}
-        <section id="quick-wins-detail" style="margin-bottom: 30px;">
-            <details open>
-                <summary style="font-size: 1.2em;">
-                    <span>✨ Quick Wins Details ({{ quick_wins.total_quick_wins }} items)</span>
-                </summary>
-                <div class="content" style="padding: 15px;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 15px;">
-                        {% if quick_wins.version_threshold %}
-                        <div class="card">
-                            <h3 style="color: #d8b4fe; margin-bottom: 10px; font-size: 1.2em;">
-                                🔄 Version Upgrades <span class="pill" style="background: rgba(124, 58, 237, 0.3);">{{
-                                    quick_wins.version_threshold|length }}</span>
-                            </h3>
-                            <div style="max-height: 400px; overflow-y: auto;">
-                                {% set grouped_vt = {} %}
-                                {% for vuln in quick_wins.version_threshold %}
-                                {% set key = vuln.plugin_name %}
-                                {% if key not in grouped_vt %}
-                                {% set _ = grouped_vt.update({key: {'severity': vuln.severity, 'devices': [], 'count':
-                                0}}) %}
-                                {% endif %}
-                                {% if vuln.hostname not in grouped_vt[key]['devices'] %}
-                                {% set _ = grouped_vt[key]['devices'].append(vuln.hostname) %}
-                                {% endif %}
-                                {% set _ = grouped_vt[key].update({'count': grouped_vt[key]['devices']|length}) %}
-                                {% endfor %}
-                                {% for plugin_name, data in grouped_vt.items()|sort(attribute='1.count', reverse=true)
-                                %}
-                                <div class="qw-item vt" onclick="this.classList.toggle('open')">
-                                    <div class="qw-header">
-                                        <span style="font-weight: 600; flex: 1;">{{ plugin_name }}</span>
-                                        <div style="display: flex; gap: 8px; align-items: center;">
-                                            <span class="badge severity-{{ data.severity|lower }}">{{ data.severity
-                                                }}</span>
-                                            <span class="pill" style="background: #4b5563;">{{ data.count }} device{% if
-                                                data.count > 1 %}s{% endif %}</span>
-                                        </div>
-                                    </div>
-                                    <div class="qw-devices">
-                                        {% for device in data.devices %}
-                                        <span class="device-chip">{{ device }}</span>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% if quick_wins.unsupported_product %}
-                        <div class="card">
-                            <h3 style="color: #f9a8d4; margin-bottom: 10px; font-size: 1.2em;">
-                                ⚠️ Unsupported/EOL <span class="pill" style="background: rgba(219, 39, 119, 0.3);">{{
-                                    quick_wins.unsupported_product|length }}</span>
-                            </h3>
-                            <div style="max-height: 400px; overflow-y: auto;">
-                                {% set grouped_up = {} %}
-                                {% for vuln in quick_wins.unsupported_product %}
-                                {% set key = vuln.plugin_name %}
-                                {% if key not in grouped_up %}
-                                {% set _ = grouped_up.update({key: {'severity': vuln.severity, 'devices': [], 'count':
-                                0}}) %}
-                                {% endif %}
-                                {% if vuln.hostname not in grouped_up[key]['devices'] %}
-                                {% set _ = grouped_up[key]['devices'].append(vuln.hostname) %}
-                                {% endif %}
-                                {% set _ = grouped_up[key].update({'count': grouped_up[key]['devices']|length}) %}
-                                {% endfor %}
-                                {% for plugin_name, data in grouped_up.items()|sort(attribute='1.count', reverse=true)
-                                %}
-                                <div class="qw-item eol" onclick="this.classList.toggle('open')">
-                                    <div class="qw-header">
-                                        <span style="font-weight: 600; flex: 1;">{{ plugin_name }}</span>
-                                        <div style="display: flex; gap: 8px; align-items: center;">
-                                            <span class="badge severity-{{ data.severity|lower }}">{{ data.severity
-                                                }}</span>
-                                            <span class="pill" style="background: #4b5563;">{{ data.count }} device{% if
-                                                data.count > 1 %}s{% endif %}</span>
-                                        </div>
-                                    </div>
-                                    <div class="qw-devices">
-                                        {% for device in data.devices %}
-                                        <span class="device-chip">{{ device }}</span>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </details>
-        </section>
-        {% endif %}
-
-        <!-- Exploitable Vulnerabilities with Pagination -->
-        {% if exploitable_vulns %}
-        <section id="exploitable" style="margin-bottom: 30px;">
-            <details>
-                <summary style="font-size: 1.2em;">
-                    <span style="color: #ef4444;">🔥 Exploitable Vulnerabilities ({{ exploitable_vulns|length }})</span>
-                </summary>
-                <div class="content" style="padding: 15px;">
-                    <div class="pagination" id="exploitPagination">
-                        <button id="exploitPrev" disabled>← Previous</button>
-                        <span class="page-info" id="exploitPageInfo">Page 1 of 1</span>
-                        <button id="exploitNext">Next →</button>
-                    </div>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Severity</th>
-                                    <th>VPR</th>
-                                    <th>Vulnerability</th>
-                                    <th>Age (Days)</th>
-                                    <th>Asset</th>
-                                    <th>Application</th>
-                                    <th>State</th>
-                                </tr>
-                            </thead>
-                            <tbody id="exploitTableBody">
-                                {% for vuln in exploitable_vulns|sort(attribute='vpr_score', reverse=True) %}
-                                {% set vpr = vuln.vpr_score|default(0.0)|float %}
-                                <tr class="exploit-row" data-index="{{ loop.index0 }}"
-                                    style="{% if vpr >= 9.0 %}background: rgba(239, 68, 68, 0.15); border-left: 3px solid #ef4444;{% endif %}">
-                                    <td><span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity
-                                            }}</span></td>
-                                    <td>
-                                        {% if vuln.vpr_score %}
-                                        <span class="badge"
-                                            style="background: {% if vpr >= 9 %}#7f1d1d{% elif vpr >= 7 %}#c2410c{% else %}#374151{% endif %};">
-                                            {{ vuln.vpr_score }}
-                                        </span>
-                                        {% else %}
-                                        <span class="pill">N/A</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div style="font-weight: 600;">{{ vuln.plugin_name }}</div>
-                                        <div style="font-size: 0.9em; color: var(--muted);">Plugin ID: {{ vuln.plugin_id
-                                            }}</div>
-                                    </td>
-                                    <td>
-                                        {% if vuln.age_days is not none %}
-                                        <span class="pill {% if vuln.age_days > 90 %}critical{% elif vuln.age_days > 30 %}high{% endif %}">{{ vuln.age_days }} days</span>
-                                        {% else %}
-                                        <span class="pill">N/A</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div>{{ vuln.hostname }}</div>
-                                        <div style="font-size: 0.9em; color: var(--muted);">{{ vuln.ipv4 }}</div>
-                                    </td>
-                                    <td><span class="pill blue">{{ vuln.application }}</span></td>
-                                    <td><span class="state-badge state-{{ vuln.state|lower }}">{{ vuln.state }}</span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="pagination">
-                        <button id="exploitPrev2" disabled>← Previous</button>
-                        <span class="page-info" id="exploitPageInfo2">Page 1 of 1</span>
-                        <button id="exploitNext2">Next →</button>
-                    </div>
-                </div>
-            </details>
-        </section>
-        {% endif %}
 
         <!-- Application/Service Drill-Down Section -->
         <section id="drill-down">
@@ -1367,39 +1092,6 @@
             });
         });
 
-        // Exploitable Pagination
-        const ITEMS_PER_PAGE = 10;
-        const exploitRows = document.querySelectorAll('.exploit-row');
-        let currentPage = 1;
-        const totalPages = Math.ceil(exploitRows.length / ITEMS_PER_PAGE);
-
-        function showExploitPage(page) {
-            currentPage = page;
-            const start = (page - 1) * ITEMS_PER_PAGE;
-            const end = start + ITEMS_PER_PAGE;
-
-            exploitRows.forEach((row, index) => {
-                row.style.display = (index >= start && index < end) ? '' : 'none';
-            });
-
-            const pageInfo = `Page ${page} of ${totalPages || 1}`;
-            document.getElementById('exploitPageInfo').textContent = pageInfo;
-            document.getElementById('exploitPageInfo2').textContent = pageInfo;
-
-            document.getElementById('exploitPrev').disabled = page <= 1;
-            document.getElementById('exploitPrev2').disabled = page <= 1;
-            document.getElementById('exploitNext').disabled = page >= totalPages;
-            document.getElementById('exploitNext2').disabled = page >= totalPages;
-        }
-
-        if (exploitRows.length > 0) {
-            showExploitPage(1);
-            document.getElementById('exploitPrev').addEventListener('click', () => showExploitPage(currentPage - 1));
-            document.getElementById('exploitPrev2').addEventListener('click', () => showExploitPage(currentPage - 1));
-            document.getElementById('exploitNext').addEventListener('click', () => showExploitPage(currentPage + 1));
-            document.getElementById('exploitNext2').addEventListener('click', () => showExploitPage(currentPage + 1));
-        }
-
         // Search with Debounce
         const searchInput = document.getElementById('searchInput');
         let searchTimeout = null;
@@ -1413,7 +1105,7 @@
 
                     if (term.length < 2) {
                         document.querySelectorAll('.vuln-card').forEach(card => card.style.display = 'block');
-                        document.querySelectorAll('table tbody tr:not(.exploit-row)').forEach(row => row.style.display = '');
+                        document.querySelectorAll('table tbody tr').forEach(row => row.style.display = '');
                         return;
                     }
 
@@ -1426,7 +1118,7 @@
                         }
                     });
 
-                    document.querySelectorAll('table tbody tr:not(.exploit-row)').forEach(row => {
+                    document.querySelectorAll('table tbody tr').forEach(row => {
                         row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
                     });
                 }, 300);
