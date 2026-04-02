@@ -26,6 +26,33 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
+def run_migrations():
+    """Run all database migrations from migrations directory"""
+    import os
+    import importlib.util
+    from pathlib import Path
+    
+    # Get project root (parent of src)
+    project_root = Path(__file__).parent.parent.parent
+    migrations_dir = project_root / "migrations"
+    
+    if not migrations_dir.exists():
+        return
+    
+    # Get all .py files in migrations directory, sorted
+    migration_files = sorted([f for f in migrations_dir.glob("*.py") if not f.name.startswith("__")])
+    
+    for migration_file in migration_files:
+        module_name = f"migrations.{migration_file.stem}"
+        spec = importlib.util.spec_from_file_location(module_name, migration_file)
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            if hasattr(module, 'upgrade'):
+                print(f"Running migration: {migration_file.name}")
+                module.upgrade()
+
+
 def drop_db():
     """Drop all tables - WARNING: Use with caution!"""
     Base.metadata.drop_all(bind=engine)

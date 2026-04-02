@@ -6,7 +6,7 @@ import sys
 from datetime import datetime, timezone
 
 from src.config import Config
-from src.database.session import get_db_session, init_db
+from src.database.session import get_db_session, init_db, run_migrations
 from src.database.models import Server, Application, ServerApplicationMap, ConfidenceLevel
 from src.services.sync_manager import SyncManager
 from src.services.report_manager import ReportManager
@@ -53,13 +53,26 @@ def cli():
 
 @cli.command()
 def init():
-    """Initialize database (create tables)"""
+    """Initialize database (create tables and run migrations)"""
     try:
         click.echo("Initializing database...")
         init_db()
+        run_migrations()
         click.echo("✓ Database initialized successfully")
     except Exception as e:
         click.echo(f"✗ Error initializing database: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+def migrate():
+    """Run pending database migrations"""
+    try:
+        click.echo("Running migrations...")
+        run_migrations()
+        click.echo("✓ Migrations complete")
+    except Exception as e:
+        click.echo(f"✗ Error running migrations: {e}", err=True)
         sys.exit(1)
 
 
