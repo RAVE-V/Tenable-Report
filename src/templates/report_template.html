@@ -651,13 +651,21 @@
                     <div class="stat-label">Mapped Servers</div>
                     <div class="stat-value">{{ metadata.mapped_servers }}/{{ metadata.total_assets }}</div>
                 </div>
+                <div class="stat-item">
+                    <div class="stat-label">Linux Servers</div>
+                    <div class="stat-value">{{ metadata.total_linux|default(0) }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Windows Servers</div>
+                    <div class="stat-value">{{ metadata.total_windows|default(0) }}</div>
+                </div>
             </div>
         </header>
 
         <!-- Focused Servers Summary Section -->
         {% if focused_grouped_by_team and focused_grouped_by_team|length > 0 %}
         <section id="focused-summary" style="margin-bottom: 30px;">
-            <h2>🎯 Servers in Focus</h2>
+            <h2>🎯 Servers in focus - currently prioritised for remediation</h2>
             <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 16px;">
                 Deep drill-down for requested servers: Team → Application → Server → Vulnerabilities.
             </p>
@@ -1319,6 +1327,11 @@
                                             <span class="badge severity-{{ vuln.severity|lower }}">{{ vuln.severity
                                                 }}</span>
                                             {{ vuln.plugin_name }}
+                                        </div>
+                                        <div class="vuln-details">
+                                            {% if vuln.age_days is not none %}
+                                            <div style="font-size: 0.85em; color: #9ca3af; margin-top: 4px;">Age: {{ vuln.age_days }} days</div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     {% endfor %}

@@ -117,23 +117,27 @@ class ServerGrouper:
     def get_server_stats(self, servers: Dict[str, Dict]) -> Dict:
         """
         Calculate overall statistics across all servers
-        
+
         Returns:
             Dictionary with aggregate stats
         """
         total_servers = len(servers)
+        total_linux = sum(1 for s in servers.values() if "linux" in str(s.get("os", "")).lower())
+        total_windows = sum(1 for s in servers.values() if "windows" in str(s.get("os", "")).lower())
         total_vulns = sum(s["total_vulns"] for s in servers.values())
         total_quick_wins = sum(s["quick_wins"] for s in servers.values())
-        
+
         severity_totals = {
             "critical": sum(s["severity_counts"]["critical"] for s in servers.values()),
             "high": sum(s["severity_counts"]["high"] for s in servers.values()),
             "medium": sum(s["severity_counts"]["medium"] for s in servers.values()),
             "low": sum(s["severity_counts"]["low"] for s in servers.values())
         }
-        
+
         return {
             "total_servers": total_servers,
+            "total_linux": total_linux,
+            "total_windows": total_windows,
             "total_vulns": total_vulns,
             "total_quick_wins": total_quick_wins,
             "severity_totals": severity_totals

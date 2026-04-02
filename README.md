@@ -63,21 +63,44 @@ python -m src.cli init
 
 ### 🐳 Running with Docker / Podman
 
-The project includes a `Dockerfile` and `docker-compose.yml` for easy deployment.
+The project includes a `Dockerfile` and `docker-compose.yml` for easy deployment. The Dockerfile uses a non-root `appuser` for security.
 
-#### 1. Setup Environment
+#### 1. Setup Environment & Directories
 Ensure you have a `.env` file in the project root with your Tenable credentials. To persist the database in a container, it is recommended to use a path within the `/app/data` directory:
 ```env
 DATABASE_URL=sqlite:///./data/tenable_reports.db
 ```
 
+**⚠️ Important for Linux Users:** 
+When using Docker Compose, volume mounts are created by the Docker daemon (as root) if they don't exist, which causes permission denied errors for the non-root `appuser` inside the container. Create the directories before running any container commands:
+
+**Linux / macOS:**
+```bash
+mkdir -p reports data .cache
+# If you still get permission issues, ensure the current user owns them or make them writable:
+chmod -R 777 reports data .cache
+```
+
+**Windows (PowerShell/CMD):**
+*(Windows Docker Desktop handles permissions automatically, but creating directories is good practice)*
+```powershell
+mkdir reports, data, .cache -ErrorAction SilentlyContinue
+```
+
 #### 2. Build the Image
+**Using Docker:**
 ```bash
 docker compose build
 ```
+**Using Podman:**
+```bash
+podman-compose build
+# OR
+podman compose build
+```
 
 #### 3. Run Commands
-You can run any CLI command using `docker compose run --rm app [COMMAND]`.
+You can run any CLI command using `docker compose run --rm app [COMMAND]`. (Replace `docker compose` with `podman compose` or `podman-compose` if using Podman).
 
 **Initialize Database:**
 ```bash

@@ -303,7 +303,9 @@ class ReportManager:
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "severity_counts": dict(severity_counts),
                 "mapped_servers": sum(len(servers) for app, servers in grouped_by_app.items() if app != "Unassigned"),
-                "total_teams": len([t for t in grouped_by_team.keys() if t != "Unassigned Team"])
+                "total_teams": len([t for t in grouped_by_team.keys() if t != "Unassigned Team"]),
+                "total_linux": sum(1 for s in server_stats.values() if "linux" in str(s.get("os", "")).lower()),
+                "total_windows": sum(1 for s in server_stats.values() if "windows" in str(s.get("os", "")).lower())
             }
 
             # Outputs

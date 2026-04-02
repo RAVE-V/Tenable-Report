@@ -314,6 +314,14 @@
                     <div class="stat-value">{{ stats.total_servers }}</div>
                 </div>
                 <div class="stat-item">
+                    <div class="stat-label">Linux Servers</div>
+                    <div class="stat-value">{{ stats.total_linux|default(0) }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Windows Servers</div>
+                    <div class="stat-value">{{ stats.total_windows|default(0) }}</div>
+                </div>
+                <div class="stat-item">
                     <div class="stat-label">Total Vulns</div>
                     <div class="stat-value">{{ stats.total_vulns }}</div>
                 </div>
